@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoachPro Email Templates</title>
+    <style>
+        /* Enhanced Email Template Styles */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .email-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            padding: 30px;
+            text-align: center;
+            color: white;
+        }
+        .email-header img {
+            max-width: 200px;
+            margin-bottom: 15px;
+        }
+        .email-header h1 {
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .email-content {
+            padding: 40px;
+            background-color: #ffffff;
+        }
+        .email-footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            border-top: 2px solid #eee;
+        }
+        .button {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 50px;
+            margin: 20px 0;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: transform 0.3s ease;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .order-details {
+            background-color: #f8f9fa;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 25px 0;
+            border-left: 4px solid #007bff;
+        }
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 25px 0;
+        }
+        .benefit-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .benefit-item i {
+            font-size: 24px;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .social-links {
+            margin-top: 25px;
+        }
+        .social-links a {
+            color: #007bff;
+            margin: 0 15px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .social-links a:hover {
+            text-decoration: underline;
+        }
+        .highlight-box {
+            background: #e8f4ff;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .steps-list {
+            counter-reset: steps;
+            list-style: none;
+            padding: 0;
+        }
+        .steps-list li {
+            position: relative;
+            padding-left: 50px;
+            margin-bottom: 20px;
+            counter-increment: steps;
+        }
+        .steps-list li::before {
+            content: counter(steps);
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 35px;
+            height: 35px;
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .contact-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 30px;
+            text-align: center;
+        }
+        .contact-info p {
+            margin: 10px 0;
+        }
+        .contact-info i {
+            color: #007bff;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Enhanced Payment Confirmation Email Template -->
+<div class="email-container">
+    <div class="email-header">
+        <img src="images/logo.png" alt="CoachPro Logo">
+        <h1>Payment Confirmation</h1>
+    </div>
+    <div class="email-content">
+        <h2>Thank You for Choosing CoachPro!</h2>
+        <p>Dear [First Name],</p>
+        <p>Great news! Your payment has been successfully processed, and you're now officially part of the CoachPro community. We're excited to begin this transformative journey with you.</p>
+        
+        <div class="order-details">
+            <h3>Order Details</h3>
+            <p><strong>Order Reference:</strong> #[Order ID]</p>
+            <p><strong>Plan:</strong> [Plan Name]</p>
+            <p><strong>Amount Paid:</strong> $[Amount]</p>
+            <p><strong>Payment Method:</strong> [Payment Method]</p>
+            <p><strong>Date:</strong> [Payment Date]</p>
+            <p><strong>Next Billing Date:</strong> [Next Billing Date]</p>
+        </div>
+
+        <div class="highlight-box">
+            <h3>🎉 What's Included in Your Plan</h3>
+            <div class="benefits-grid">
+                <div class="benefit-item">
+                    <i class="fas fa-book-reader"></i>
+                    <h4>Content Library</h4>
+                    <p>Access to premium resources</p>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-users"></i>
+                    <h4>Group Sessions</h4>
+                    <p>Weekly interactive learning</p>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-comments"></i>
+                    <h4>Community Access</h4>
+                    <p>Connect with peers</p>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-calendar-check"></i>
+                    <h4>1:1 Sessions</h4>
+                    <p>Personal coaching time</p>
+                </div>
+            </div>
+        </div>
+
+        <h3>Getting Started</h3>
+        <ol class="steps-list">
+            <li><strong>Access Your Account</strong><br>Click the button below to log in and start your journey</li>
+            <li><strong>Complete Your Profile</strong><br>Help us personalize your experience</li>
+            <li><strong>Book Your First Session</strong><br>Schedule your welcome consultation</li>
+            <li><strong>Explore Resources</strong><br>Access our extensive content library</li>
+        </ol>
+
+        <div style="text-align: center;">
+            <a href="[Login URL]" class="button">Access Your Account</a>
+        </div>
+
+        <div class="contact-info">
+            <h4>Need Help?</h4>
+            <p><i class="fas fa-envelope"></i> support@coachpro.com</p>
+            <p><i class="fas fa-phone"></i> +234 9031 433152</p>
+            <p><i class="fas fa-clock"></i> 24/7 Support Available</p>
+        </div>
+        
+        <p>Best regards,<br>The CoachPro Team</p>
+    </div>
+    <div class="email-footer">
+        <p>Follow us for daily inspiration and updates:</p>
+        <div class="social-links">
+            <a href="#"><i class="fab fa-facebook"></i> Facebook</a>
+            <a href="#"><i class="fab fa-twitter"></i> Twitter</a>
+            <a href="#"><i class="fab fa-linkedin"></i> LinkedIn</a>
+            <a href="#"><i class="fab fa-instagram"></i> Instagram</a>
+        </div>
+        <p style="margin-top: 20px;">© 2024 CoachPro. All rights reserved.</p>
+        <p style="font-size: 12px;">You're receiving this email because you signed up for a CoachPro membership.<br>
+        To unsubscribe from promotional emails, <a href="#">click here</a></p>
+    </div>
+</div>
+
+<!-- Enhanced Welcome Email Template -->
+<div class="email-container" style="margin-top: 50px;">
+    <div class="email-header">
+        <img src="images/logo.png" alt="CoachPro Logo">
+        <h1>Welcome to CoachPro!</h1>
+    </div>
+    <div class="email-content">
+        <h2>Your Journey Begins Now!</h2>
+        <p>Dear [First Name],</p>
+        <p>Welcome to the CoachPro family! We're thrilled to have you join our community of ambitious individuals committed to personal and professional growth. Your decision to invest in yourself marks the beginning of an exciting transformation.</p>
+
+        <div class="highlight-box">
+            <h3>🌟 Your Premium Benefits</h3>
+            <div class="benefits-grid">
+                <div class="benefit-item">
+                    <i class="fas fa-graduation-cap"></i>
+                    <h4>Expert Guidance</h4>
+                    <p>Learn from industry leaders</p>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-tools"></i>
+                    <h4>Premium Tools</h4>
+                    <p>Access success resources</p>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-users"></i>
+                    <h4>Community</h4>
+                    <p>Network with peers</p>
+                </div>
+                <div class="benefit-item">
+                    <i class="fas fa-chart-line"></i>
+                    <h4>Progress Tracking</h4>
+                    <p>Monitor your growth</p>
+                </div>
+            </div>
+        </div>
+
+        <h3>Your Success Roadmap</h3>
+        <ol class="steps-list">
+            <li><strong>Complete Your Profile</strong><br>Take 5 minutes to tell us about your goals and preferences</li>
+            <li><strong>Schedule Your Welcome Call</strong><br>Book your first 1:1 session with your dedicated coach</li>
+            <li><strong>Join the Community</strong><br>Introduce yourself and connect with like-minded professionals</li>
+            <li><strong>Create Your Learning Plan</strong><br>Customize your learning journey with our guided system</li>
+        </ol>
+
+        <div class="order-details">
+            <h3>Your Account Information</h3>
+            <p><strong>Email:</strong> [Email Address]</p>
+            <p><strong>Membership Plan:</strong> [Plan Name]</p>
+            <p><strong>Start Date:</strong> [Start Date]</p>
+            <p><strong>Next Session Credit:</strong> Available Now</p>
+        </div>
+
+        <div style="text-align: center;">
+            <a href="[Dashboard URL]" class="button">Access Your Dashboard</a>
+        </div>
+
+        <div class="highlight-box">
+            <h4>📅 Upcoming Events</h4>
+            <p>Mark your calendar for these exclusive member events:</p>
+            <ul style="list-style-type: none; padding: 0;">
+                <li>🎯 Goal Setting Workshop - Every Monday</li>
+                <li>💪 Leadership Masterclass - Every Wednesday</li>
+                <li>🤝 Networking Session - Every Friday</li>
+            </ul>
+        </div>
+
+        <div class="contact-info">
+            <h4>Your Support Team</h4>
+            <p><i class="fas fa-envelope"></i> support@coachpro.com</p>
+            <p><i class="fas fa-phone"></i> +234 9031 433152</p>
+            <p><i class="fas fa-comment"></i> Live Chat Available 24/7</p>
+        </div>
+        
+        <p>Here's to your success!<br>The CoachPro Team</p>
+    </div>
+    <div class="email-footer">
+        <p>Connect with us:</p>
+        <div class="social-links">
+            <a href="#"><i class="fab fa-facebook"></i> Facebook</a>
+            <a href="#"><i class="fab fa-twitter"></i> Twitter</a>
+            <a href="#"><i class="fab fa-linkedin"></i> LinkedIn</a>
+            <a href="#"><i class="fab fa-instagram"></i> Instagram</a>
+        </div>
+        <p style="margin-top: 20px;">© 2024 CoachPro. All rights reserved.</p>
+        <p style="font-size: 12px;">You're receiving this email because you signed up for a CoachPro membership.<br>
+        To manage your email preferences, <a href="#">click here</a></p>
+    </div>
+</div>
+
+</body>
+</html> 

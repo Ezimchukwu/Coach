@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Membership Payment - CoachPro</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .payment-section {
+            padding: 100px 0;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        .payment-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .payment-methods {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .payment-method-option {
+            flex: 1;
+            padding: 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .payment-method-option:hover {
+            border-color: #007bff;
+            background-color: #f8f9fa;
+        }
+        .payment-method-option.active {
+            border-color: #007bff;
+            background-color: #e8f4ff;
+        }
+        .payment-method-option i {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #007bff;
+        }
+        .payment-form {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .order-summary {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .crypto-address {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .wallet-address {
+            word-break: break-all;
+            font-family: monospace;
+            margin: 0;
+        }
+        #card-element {
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        #card-element:hover {
+            border-color: #007bff;
+        }
+        #card-element.StripeElement--focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        #card-element.StripeElement--invalid {
+            border-color: #dc3545;
+        }
+        #card-element.StripeElement--webkit-autofill {
+            background-color: #fefde5 !important;
+        }
+        .payment-error {
+            color: #dc3545;
+            margin-top: 10px;
+            font-size: 14px;
+            display: none;
+        }
+        .payment-error.visible {
+            display: block;
+        }
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+        }
+        .btn-primary {
+            padding: 12px 24px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:disabled {
+            background-color: #ccc;
+            border-color: #ccc;
+        }
+        .spinner-border {
+            margin-right: 8px;
+        }
+        .payment-success {
+            color: #28a745;
+            display: none;
+            margin-top: 15px;
+        }
+        .payment-success.visible {
+            display: block;
+        }
+        @media (max-width: 768px) {
+            .payment-methods {
+                flex-direction: column;
+            }
+            .payment-method-option {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">CoachPro</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html#services">Services</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html#membership">Membership</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Payment Section -->
+    <section class="payment-section">
+        <div class="container">
+            <div class="payment-container">
+                <h2 class="text-center mb-4">Complete Your Payment</h2>
+                
+                <!-- Order Summary -->
+                <div class="order-summary">
+                    <h4 class="mb-3">Order Summary</h4>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Plan:</span>
+                        <strong id="selected-plan">Professional Membership</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Amount:</span>
+                        <strong id="plan-amount">$99.00</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Billing:</span>
+                        <span>Monthly</span>
+                    </div>
+                </div>
+
+                <!-- Payment Methods -->
+                <div class="payment-methods">
+                    <div class="payment-method-option active" data-method="card">
+                        <i class="fas fa-credit-card"></i>
+                        <h5>Card</h5>
+                        <small>Credit/Debit Card</small>
+                    </div>
+                    <div class="payment-method-option" data-method="paypal">
+                        <i class="fab fa-paypal"></i>
+                        <h5>PayPal</h5>
+                        <small>Pay with PayPal</small>
+                    </div>
+                    <div class="payment-method-option" data-method="bank-transfer">
+                        <i class="fas fa-university"></i>
+                        <h5>Bank Transfer</h5>
+                        <small>Direct Bank Transfer</small>
+                    </div>
+                    <div class="payment-method-option" data-method="crypto">
+                        <i class="fab fa-bitcoin"></i>
+                        <h5>Crypto</h5>
+                        <small>BTC/ETH</small>
+                    </div>
+                </div>
+
+                <!-- Card Payment Form -->
+                <div id="card-form" class="payment-form">
+                    <form id="payment-form" data-payment-method="card">
+                        <div class="mb-4">
+                            <label class="form-label">Card Information</label>
+                            <div id="card-element" class="mb-2"></div>
+                            <div id="card-errors" class="payment-error"></div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Name on Card</label>
+                            <input type="text" class="form-control" id="card-name" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="card-email" required>
+                            <small class="text-muted">We'll send your receipt to this email address</small>
+                        </div>
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="save-card" checked>
+                                <label class="form-check-label" for="save-card">
+                                    Save card for future payments
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" id="card-button">
+                            <span class="button-text">Complete Payment</span>
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        </button>
+                        <div class="payment-success" id="card-success">
+                            <i class="fas fa-check-circle"></i> Payment successful! Redirecting...
+                        </div>
+                    </form>
+                </div>
+
+                <!-- PayPal Payment -->
+                <div id="paypal-form" class="payment-form d-none">
+                    <div id="paypal-button-container"></div>
+                </div>
+
+                <!-- Bank Transfer Form -->
+                <div id="bank-transfer-form" class="payment-form d-none">
+                    <div id="bank-transfer-details"></div>
+                    <form data-payment-method="bank-transfer" class="mt-4">
+                        <div class="mb-4">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" class="form-control" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" required>
+                            <small class="text-muted">We'll send payment confirmation to this email</small>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">Payment Receipt</label>
+                            <input type="file" class="form-control" id="receipt-upload" accept="image/*,.pdf" required>
+                            <small class="text-muted">Upload your bank transfer receipt (PDF or Image)</small>
+                        </div>
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" required>
+                                <label class="form-check-label">
+                                    I confirm that I have made the bank transfer with the exact amount
+                                </label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <span class="button-text">Verify Payment</span>
+                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Crypto Payment Form -->
+                <div id="crypto-form" class="payment-form d-none">
+                    <div id="crypto-payment-details"></div>
+                    <form data-payment-method="crypto">
+                        <div class="mb-3">
+                            <label class="form-label">Transaction ID</label>
+                            <input type="text" class="form-control" id="transaction-id" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Verify Payment</button>
+                    </form>
+                </div>
+
+                <div id="payment-error" class="alert alert-danger mt-3 d-none"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Stripe JS -->
+    <script src="https://js.stripe.com/v3/"></script>
+    <!-- PayPal JS -->
+    <script src="https://www.paypal.com/sdk/js?client-id=your_paypal_client_id&currency=USD"></script>
+    <!-- Payment Handler -->
+    <script type="module">
+        // Initialize Stripe
+        const stripe = Stripe('pk_test_51OxjKhDfqnqBYZPPJjkQh8YwNsiRtjDqaXejtGXkHKTGGkIwN7YtQmkHAuTrack0aqXxVJXBXZYHDcGWvEEbBT00vQPJLkwF');
+        const elements = stripe.elements();
+
+        // Enhanced card validation rules
+        const cardValidation = {
+            validateEmail: (email) => {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                return emailRegex.test(email);
+            },
+            validateName: (name) => {
+                return name.trim().length >= 3 && /^[a-zA-Z\s'-]+$/.test(name);
+            },
+            getCardBrand: (brand) => {
+                const brands = {
+                    visa: 'Visa',
+                    mastercard: 'Mastercard',
+                    amex: 'American Express',
+                    discover: 'Discover',
+                    diners: 'Diners Club',
+                    jcb: 'JCB',
+                    unionpay: 'UnionPay',
+                    unknown: 'Unknown'
+                };
+                return brands[brand] || brands.unknown;
+            }
+        };
+
+        // Create card element with enhanced styling
+        const card = elements.create('card', {
+            style: {
+                base: {
+                    fontSize: '16px',
+                    color: '#32325d',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    fontSmoothing: 'antialiased',
+                    '::placeholder': {
+                        color: '#aab7c4'
+                    },
+                    ':-webkit-autofill': {
+                        color: '#32325d'
+                    }
+                },
+                invalid: {
+                    color: '#fa755a',
+                    iconColor: '#fa755a',
+                    ':-webkit-autofill': {
+                        color: '#fa755a'
+                    }
+                }
+            },
+            hidePostalCode: false,
+            classes: {
+                focus: 'is-focused',
+                empty: 'is-empty',
+                invalid: 'is-invalid'
+            }
+        });
+
+        // Mount card element
+        card.mount('#card-element');
+
+        // Create helper functions for UI updates
+        const uiHelpers = {
+            showError: (message) => {
+                const errorElement = document.getElementById('card-errors');
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+            },
+            clearError: () => {
+                const errorElement = document.getElementById('card-errors');
+                errorElement.textContent = '';
+                errorElement.style.display = 'none';
+            },
+            updateButtonState: (button, isLoading) => {
+                button.disabled = isLoading;
+                button.querySelector('.button-text').style.display = isLoading ? 'none' : 'inline';
+                button.querySelector('.spinner-border').classList.toggle('d-none', !isLoading);
+            },
+            showCardBrand: (brand) => {
+                const brandName = cardValidation.getCardBrand(brand);
+                const cardLabel = document.querySelector('label[for="card-element"]');
+                if (cardLabel) {
+                    cardLabel.textContent = `Card Information (${brandName})`;
+                }
+            }
+        };
+
+        // Handle real-time validation errors
+        card.addEventListener('change', function(event) {
+            uiHelpers.clearError();
+
+            if (event.error) {
+                uiHelpers.showError(event.error.message);
+            }
+
+            // Update card brand when detected
+            if (event.brand) {
+                uiHelpers.showCardBrand(event.brand);
+            }
+
+            // Add visual feedback classes
+            const cardElement = document.getElementById('card-element');
+            cardElement.classList.toggle('is-invalid', !!event.error);
+            cardElement.classList.toggle('is-empty', event.empty);
+        });
+
+        // Handle form submission with enhanced validation
+        const form = document.getElementById('payment-form');
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const cardButton = document.getElementById('card-button');
+            const cardName = document.getElementById('card-name').value;
+            const cardEmail = document.getElementById('card-email').value;
+
+            // Validate name
+            if (!cardValidation.validateName(cardName)) {
+                uiHelpers.showError('Please enter a valid name (minimum 3 characters, letters only)');
+                return;
+            }
+
+            // Validate email
+            if (!cardValidation.validateEmail(cardEmail)) {
+                uiHelpers.showError('Please enter a valid email address');
+                return;
+            }
+
+            // Show loading state
+            uiHelpers.updateButtonState(cardButton, true);
+
+            try {
+                // Get selected plan amount
+                const planAmount = document.getElementById('plan-amount').textContent;
+                const amount = parseFloat(planAmount.replace('$', '')) * 100; // Convert to cents
+
+                // Create payment method
+                const { paymentMethod, error } = await stripe.createPaymentMethod({
+                    type: 'card',
+                    card: card,
+                    billing_details: {
+                        name: cardName,
+                        email: cardEmail
+                    }
+                });
+
+                if (error) {
+                    throw error;
+                }
+
+                // Additional validation for card limits
+                const cardType = paymentMethod.card.brand;
+                const last4 = paymentMethod.card.last4;
+
+                // Validate card based on type and amount
+                if (amount > 10000 && cardType === 'visa' && !paymentMethod.card.three_d_secure_usage?.supported) {
+                    throw new Error('3D Secure is required for transactions over $100 with this card');
+                }
+
+                // Show success message with card info
+                const successElement = document.getElementById('card-success');
+                successElement.innerHTML = `
+                    <i class="fas fa-check-circle"></i> Payment successful with ${cardValidation.getCardBrand(cardType)} ending in ${last4}! Redirecting...
+                `;
+                successElement.classList.add('visible');
+
+                // Simulate payment processing with enhanced feedback
+                setTimeout(() => {
+                    // Redirect to success page with additional details
+                    const params = new URLSearchParams({
+                        plan: window.selectedPlan || 'professional',
+                        method: 'card',
+                        cardType: cardType,
+                        last4: last4,
+                        transaction: paymentMethod.id,
+                        date: new Date().toISOString()
+                    });
+                    window.location.href = `success.html?${params.toString()}`;
+                }, 2000);
+
+            } catch (error) {
+                // Enhanced error handling
+                let errorMessage = error.message;
+                
+                // Provide more user-friendly error messages
+                const errorMap = {
+                    'card_declined': 'Your card was declined. Please try another card.',
+                    'expired_card': 'Your card has expired. Please use a different card.',
+                    'incorrect_cvc': 'The security code is incorrect. Please check and try again.',
+                    'insufficient_funds': 'Insufficient funds. Please use a different card.',
+                    'invalid_expiry_year': 'The expiration year is invalid. Please check and try again.',
+                    'invalid_expiry_month': 'The expiration month is invalid. Please check and try again.',
+                    'invalid_number': 'The card number is invalid. Please check and try again.'
+                };
+
+                if (error.code && errorMap[error.code]) {
+                    errorMessage = errorMap[error.code];
+                }
+
+                uiHelpers.showError(errorMessage);
+                uiHelpers.updateButtonState(cardButton, false);
+            }
+        });
+
+        // Handle payment method selection
+        document.querySelectorAll('.payment-method-option').forEach(option => {
+            option.addEventListener('click', function() {
+                // Remove active class from all options
+                document.querySelectorAll('.payment-method-option').forEach(opt => {
+                    opt.classList.remove('active');
+                });
+                
+                // Add active class to selected option
+                this.classList.add('active');
+                
+                // Hide all payment forms
+                document.querySelectorAll('.payment-form').forEach(form => {
+                    form.classList.add('d-none');
+                });
+                
+                // Show selected payment form
+                const method = this.dataset.method;
+                document.getElementById(`${method}-form`).classList.remove('d-none');
+
+                // Initialize bank transfer if selected
+                if (method === 'bank-transfer') {
+                    const bankDetails = document.getElementById('bank-transfer-details');
+                    bankDetails.innerHTML = `
+                        <div class="alert alert-info">
+                            <h5>Bank Transfer Details</h5>
+                            <p>Please transfer the exact amount to:</p>
+                            <div class="bank-info">
+                                <p><strong>Bank Name:</strong> Access Bank</p>
+                                <p><strong>Account Name:</strong> DIVINE EZECHIM AZUDIARU</p>
+                                <p><strong>Account Number:</strong> 1499511066</p>
+                                <p><strong>Swift Code:</strong> ABNGNGLA</p>
+                                <p><strong>Bank Code:</strong> 044</p>
+                            </div>
+                            <div class="mt-3">
+                                <p class="mb-2"><strong>Important Notes:</strong></p>
+                                <ul class="mb-0">
+                                    <li>Please include your email as payment reference</li>
+                                    <li>Transfer must be made within 24 hours</li>
+                                    <li>Upload your payment receipt below for verification</li>
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+        });
+
+        // Update plan details from URL parameters
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const plan = urlParams.get('plan') || 'professional';
+            
+            const plans = {
+                basic: {
+                    name: 'Basic Membership',
+                    amount: '$49.00'
+                },
+                professional: {
+                    name: 'Professional Membership',
+                    amount: '$99.00'
+                },
+                enterprise: {
+                    name: 'Enterprise Membership',
+                    amount: '$199.00'
+                }
+            };
+
+            const selectedPlan = plans[plan];
+            if (selectedPlan) {
+                document.getElementById('selected-plan').textContent = selectedPlan.name;
+                document.getElementById('plan-amount').textContent = selectedPlan.amount;
+                window.selectedPlan = plan;
+            }
+        });
+    </script>
+</body>
+</html> 

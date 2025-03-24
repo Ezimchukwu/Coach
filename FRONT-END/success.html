@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Success - CoachPro</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .success-section {
+            padding: 100px 0;
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .success-card {
+            background: white;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #28a745;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+        }
+        .success-icon i {
+            color: white;
+            font-size: 40px;
+        }
+        .next-steps {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .next-steps ul {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+        .next-steps li {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .next-steps li i {
+            color: #28a745;
+            margin-right: 10px;
+            font-size: 20px;
+        }
+        .plan-features {
+            background: #e8f4ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .plan-features ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .plan-features li {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .plan-features li i {
+            color: #007bff;
+            margin-right: 10px;
+        }
+        .plan-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-left: 10px;
+            color: white;
+        }
+        .plan-badge.basic {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        }
+        .plan-badge.professional {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        }
+        .plan-badge.enterprise {
+            background: linear-gradient(135deg, #6f42c1 0%, #4e2a84 100%);
+        }
+        .welcome-message {
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            text-align: left;
+        }
+        .session-info {
+            background: #e8f4ff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .support-info {
+            margin-top: 30px;
+            padding: 20px;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">CoachPro</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="index.html">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html#services">Services</a></li>
+                    <li class="nav-item"><a class="nav-link" href="index.html#membership">Membership</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Success Section -->
+    <section class="success-section">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="success-card">
+                        <div class="success-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <h2 class="mb-4">Payment Successful!</h2>
+                        <p class="lead mb-4">Thank you for joining CoachPro. Your membership has been activated successfully.</p>
+                        
+                        <div class="order-details mb-4">
+                            <p class="mb-1">Order Reference: <strong id="orderRef">#CP<script>document.write(Math.floor(Math.random()*90000) + 10000)</script></strong></p>
+                            <p class="mb-1">Plan: <strong id="planName"></strong> <span id="planBadge"></span></p>
+                            <p>Amount Paid: <strong id="planAmount"></strong></p>
+                        </div>
+
+                        <div class="welcome-message" id="welcomeMessage"></div>
+
+                        <div class="plan-features">
+                            <h4 class="mb-3">Your Plan Features</h4>
+                            <ul id="planFeatures"></ul>
+                        </div>
+
+                        <div class="session-info" id="sessionInfo"></div>
+
+                        <div class="next-steps">
+                            <h4 class="mb-4">Next Steps</h4>
+                            <ul id="nextSteps"></ul>
+                        </div>
+
+                        <div class="mt-4">
+                            <a href="dashboard.html" class="btn btn-primary btn-lg me-3">Go to Dashboard</a>
+                            <a href="index.html#contact" class="btn btn-outline-primary btn-lg">Need Help?</a>
+                        </div>
+
+                        <div class="support-info">
+                            <h5>Need Assistance?</h5>
+                            <p>Our support team is here to help you get started:</p>
+                            <p><i class="fas fa-envelope me-2"></i>support@coachpro.com</p>
+                            <p><i class="fas fa-phone me-2"></i>+234 9031 433152</p>
+                            <p><i class="fas fa-clock me-2"></i><span id="supportHours"></span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JS -->
+    <script>
+        // Plan configurations
+        const plans = {
+            basic: {
+                name: 'Basic Membership',
+                amount: '$49.00',
+                badge: 'basic',
+                welcome: 'Welcome to CoachPro! You\'ve taken the first step towards personal growth with our Basic Membership.',
+                features: [
+                    'Basic Content Library Access',
+                    'Community Forum Access',
+                    'Monthly Group Session',
+                    'Email Support',
+                    'Mobile App Access (Basic)'
+                ],
+                sessions: {
+                    title: 'Your Monthly Session',
+                    text: 'You have access to 1 group coaching session per month. Schedule your first session now to get started!'
+                },
+                nextSteps: [
+                    'Check your email for login credentials',
+                    'Complete your basic profile',
+                    'Schedule your first group session',
+                    'Explore the basic content library'
+                ],
+                support: '9 AM - 5 PM (Mon-Fri)'
+            },
+            professional: {
+                name: 'Professional Membership',
+                amount: '$99.00',
+                badge: 'professional',
+                welcome: 'Welcome to our Professional Membership! You now have access to our comprehensive coaching resources and personalized support.',
+                features: [
+                    'Full Content Library Access',
+                    'Priority Community Access',
+                    'Weekly Group Sessions',
+                    '1 Private Session/Month',
+                    'Priority Email Support',
+                    'Mobile App Access (Full)',
+                    'Progress Tracking Tools'
+                ],
+                sessions: {
+                    title: 'Your Coaching Sessions',
+                    text: 'You have access to weekly group sessions and 1 private coaching session per month. Book your private session now!'
+                },
+                nextSteps: [
+                    'Check your email for login credentials',
+                    'Complete your professional profile',
+                    'Book your private coaching session',
+                    'Join this week\'s group session',
+                    'Access your exclusive content library'
+                ],
+                support: '9 AM - 9 PM (Mon-Sat)'
+            },
+            enterprise: {
+                name: 'Enterprise Membership',
+                amount: '$199.00',
+                badge: 'enterprise',
+                welcome: 'Welcome to our exclusive Enterprise Membership! You\'ve unlocked our most comprehensive coaching experience with VIP support.',
+                features: [
+                    'VIP Content Library Access',
+                    'Unlimited Group Sessions',
+                    '4 Private Sessions/Month',
+                    'Custom Learning Path',
+                    '24/7 Priority Support',
+                    'Advanced Analytics Dashboard',
+                    'Custom Resource Creation',
+                    'Executive Networking Events',
+                    'Dedicated Account Manager'
+                ],
+                sessions: {
+                    title: 'Your VIP Coaching Package',
+                    text: 'You have unlimited access to group sessions and 4 private coaching sessions per month. Your dedicated account manager will help schedule your sessions.'
+                },
+                nextSteps: [
+                    'Check your email for VIP credentials',
+                    'Complete your executive profile',
+                    'Meet your dedicated account manager',
+                    'Schedule your private sessions',
+                    'Access your VIP content library',
+                    'Join the executive network'
+                ],
+                support: '24/7 Priority Support'
+            }
+        };
+
+        // Update page content based on selected plan
+        function updatePageContent() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const plan = urlParams.get('plan') || 'professional';
+            const selectedPlan = plans[plan];
+            
+            // Update plan details
+            document.getElementById('planName').textContent = selectedPlan.name;
+            document.getElementById('planAmount').textContent = selectedPlan.amount;
+            
+            // Add plan badge
+            const badge = document.getElementById('planBadge');
+            badge.className = `plan-badge ${selectedPlan.badge}`;
+            badge.textContent = selectedPlan.badge.charAt(0).toUpperCase() + selectedPlan.badge.slice(1);
+
+            // Update welcome message
+            document.getElementById('welcomeMessage').textContent = selectedPlan.welcome;
+
+            // Update features
+            const featuresList = document.getElementById('planFeatures');
+            featuresList.innerHTML = selectedPlan.features.map(feature => 
+                `<li><i class="fas fa-check-circle"></i>${feature}</li>`
+            ).join('');
+
+            // Update session info
+            const sessionInfo = document.getElementById('sessionInfo');
+            sessionInfo.innerHTML = `
+                <h4 class="mb-3">${selectedPlan.sessions.title}</h4>
+                <p class="mb-0">${selectedPlan.sessions.text}</p>
+            `;
+
+            // Update next steps
+            const nextStepsList = document.getElementById('nextSteps');
+            nextStepsList.innerHTML = selectedPlan.nextSteps.map(step => 
+                `<li><i class="fas fa-arrow-right"></i>${step}</li>`
+            ).join('');
+
+            // Update support hours
+            document.getElementById('supportHours').textContent = selectedPlan.support;
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', updatePageContent);
+    </script>
+</body>
+</html> 

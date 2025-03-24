@@ -1,0 +1,185 @@
+/* Login Page Styles */
+.login-page {
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
+    min-height: 100vh;
+}
+
+.login-section {
+    padding: 8rem 0 4rem;
+}
+
+.login-box {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.95));
+    padding: 3rem;
+    border-radius: 20px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.login-box:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.login-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+
+.login-subtitle {
+    color: #6b7280;
+    margin-bottom: 2rem;
+}
+
+.login-form .input-group {
+    transition: all 0.3s ease;
+}
+
+.login-form .input-group:focus-within {
+    transform: translateY(-2px);
+}
+
+.login-form .input-group-text {
+    background: transparent;
+    border-right: none;
+    color: #6b7280;
+}
+
+.login-form .form-control {
+    border-left: none;
+    padding: 0.75rem 1rem;
+    background: transparent;
+}
+
+.login-form .form-control:focus {
+    box-shadow: none;
+    border-color: #ced4da;
+}
+
+.login-form .btn-outline-secondary {
+    border-left: none;
+    background: transparent;
+}
+
+.login-form .btn-outline-secondary:hover,
+.login-form .btn-outline-secondary:focus {
+    background: transparent;
+    border-color: #ced4da;
+    color: var(--primary-color);
+}
+
+.forgot-password {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.forgot-password:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
+.register-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.register-link:hover {
+    color: var(--secondary-color);
+    text-decoration: underline;
+}
+
+.social-login {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.social-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+.social-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* Button Styles */
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(79, 70, 229, 0.3);
+}
+
+.btn-outline-danger {
+    transition: all 0.3s ease;
+}
+
+.btn-outline-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(220, 38, 38, 0.2);
+}
+
+/* Alert Styles */
+.alert {
+    border-radius: 12px;
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+/* Loading State */
+.spinner-border {
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-left: 0.5rem;
+}
+
+/* Responsive Styles */
+@media (max-width: 767.98px) {
+    .login-section {
+        padding: 6rem 1rem 2rem;
+    }
+    
+    .login-box {
+        padding: 2rem;
+    }
+    
+    .login-title {
+        font-size: 1.75rem;
+    }
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+} 
