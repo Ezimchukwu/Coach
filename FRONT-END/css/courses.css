@@ -1,0 +1,271 @@
+/* Courses Page Styles */
+:root {
+    --primary-color: #2B6777;
+    --secondary-color: #C8D8E4;
+    --accent-color: #52AB98;
+    --background-color: #F2F2F2;
+    --text-color: #333333;
+}
+
+.navbar {
+    background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+}
+
+/* Section Titles */
+.section-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    text-align: center;
+    background: linear-gradient(45deg, #2b2d42, #8d99ae);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    position: relative;
+    color: var(--primary-color);
+}
+
+.section-title::after {
+    content: '';
+    display: block;
+    width: 100px;
+    height: 4px;
+    background: linear-gradient(45deg, #2b2d42, #8d99ae);
+    margin: 1rem auto;
+    border-radius: 2px;
+}
+
+/* Program Cards */
+.program-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.program-card:hover {
+    transform: translateY(-5px);
+}
+
+.program-image {
+    height: 200px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+
+.program-image::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+}
+
+.program-content {
+    padding: 1.5rem;
+}
+
+.program-content h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+}
+
+.program-stats {
+    display: flex;
+    justify-content: space-between;
+    margin: 1rem 0;
+    color: var(--text-color);
+}
+
+.program-stats span {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Success Story Cards */
+.success-story-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.story-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.story-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    margin-right: 1rem;
+    border: 3px solid var(--accent-color);
+    object-fit: cover;
+}
+
+.story-meta h4 {
+    color: var(--primary-color);
+    margin-bottom: 0.25rem;
+}
+
+.story-meta p {
+    margin: 0.5rem 0;
+    color: #8d99ae;
+}
+
+.program-badge {
+    background-color: var(--accent-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+}
+
+.story-content {
+    color: #2b2d42;
+}
+
+.story-metrics {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--secondary-color);
+}
+
+.metric {
+    text-align: center;
+}
+
+.metric-value {
+    color: var(--primary-color);
+    font-size: 1.5rem;
+    font-weight: 600;
+    display: block;
+}
+
+.metric-label {
+    color: var(--text-color);
+    font-size: 0.875rem;
+}
+
+/* Benefit Cards */
+.benefit-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.benefit-card i {
+    font-size: 2rem;
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+}
+
+.benefit-card h4 {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.benefit-card p {
+    color: #8d99ae;
+    margin: 0;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .section-title {
+        font-size: 2rem;
+    }
+
+    .program-card {
+        margin-bottom: 2rem;
+    }
+
+    .story-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .story-metrics {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .benefit-card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.program-card,
+.success-story-card,
+.benefit-card {
+    animation: fadeIn 0.6s ease-out forwards;
+}
+
+.program-card:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.program-card:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+/* Hover Effects */
+.success-story-card:hover {
+    transform: translateY(-5px);
+    transition: transform 0.3s ease;
+}
+
+.benefit-card:hover i {
+    transform: scale(1.1);
+    transition: transform 0.3s ease;
+} 

@@ -44,8 +44,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const interest = document.getElementById('interest').value;
         const terms = document.getElementById('terms').checked;
 
-        // Validate form
-        if (!validateForm(firstName, lastName, email, phone, password, confirmPassword, interest, terms)) {
+        // Enhanced validation with specific error messages
+        const validationErrors = [];
+        
+        if (!firstName || !lastName) validationErrors.push('Please enter your full name');
+        if (!isValidEmail(email)) validationErrors.push('Please enter a valid email address');
+        if (!isValidPhone(phone)) validationErrors.push('Please enter a valid phone number');
+        if (!isValidPassword(password)) validationErrors.push('Password must meet all requirements');
+        if (password !== confirmPassword) validationErrors.push('Passwords do not match');
+        if (!interest) validationErrors.push('Please select your area of interest');
+        if (!terms) validationErrors.push('Please accept the terms and conditions');
+        
+        if (validationErrors.length > 0) {
+            errorMessage.innerHTML = validationErrors.map(error => `<div>${error}</div>`).join('');
+            errorMessage.classList.remove('d-none');
             return;
         }
 
@@ -55,38 +67,69 @@ document.addEventListener('DOMContentLoaded', function() {
         registerButton.disabled = true;
 
         try {
-            // Prepare data for API
-            const userData = {
-                firstName,
-                lastName,
-                email,
-                phone,
-                password,
-                interest
-            };
+            // Check server connection
+            const isConnected = await checkServerConnection();
+            if (!isConnected) {
+                throw new Error('Server is offline. Please start the backend server and try again.');
+            }
 
-            // Send registration request to API
-            const response = await fetch('/api/register', {
+            const response = await fetch('http://localhost:5000/api/auth/signup', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
                 },
-                body: JSON.stringify(userData)
+                credentials: 'include',
+                body: JSON.stringify({
+                    firstName,
+                    lastName,
+                    email,
+                    phoneNumber: phone,
+                    password,
+                    passwordConfirm: confirmPassword,
+                    interest,
+                    address: {
+                        street: '',
+                        city: '',
+                        state: '',
+                        zipCode: '',
+                        country: ''
+                    }
+                })
             });
-
-            if (!response.ok) {
-                throw new Error('Registration failed');
-            }
 
             const data = await response.json();
 
-            // Show success message
-            successMessage.classList.remove('d-none');
-            registerForm.reset();
+            if (!response.ok) {
+                if (data.error && data.error.code === 11000) {
+                    // Clear the form and show a more user-friendly message
+                    registerForm.reset();
+                    throw new Error(`
+                        <div class="alert alert-warning text-center">
+                            <i class="fas fa-exclamation-triangle mb-2"></i>
+                            <p>This email address is already registered.</p>
+                            <div class="mt-2">
+                                <a href="login.html" class="btn btn-primary btn-sm me-2">Login</a>
+                                <a href="forgot-password.html" class="btn btn-secondary btn-sm">Reset Password</a>
+                            </div>
+                        </div>
+                    `);
+                }
+                throw new Error(data.message || 'Registration failed. Please try again.');
+            }
 
-            // Store user data
-            localStorage.setItem('userEmail', email);
-            localStorage.setItem('userName', `${firstName} ${lastName}`);
+            // Show success message
+            successMessage.innerHTML = `
+                <div class="alert alert-success text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <p>Registration successful!</p>
+                    <p class="small">Redirecting to login page...</p>
+                </div>
+            `;
+            successMessage.classList.remove('d-none');
+            
+            // Clear form
+            registerForm.reset();
 
             // Redirect to login page after 2 seconds
             setTimeout(() => {
@@ -95,8 +138,27 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (error) {
             console.error('Registration error:', error);
-            errorMessage.textContent = 'Registration failed. Please try again.';
+            
+            // Handle specific error cases
+            let errorMsg = error.message;
+            if (error.message === 'Failed to fetch') {
+                errorMsg = `
+                    <div class="alert alert-danger text-center">
+                        <i class="fas fa-exclamation-circle mb-2"></i>
+                        <p>Unable to connect to the server.</p>
+                        <ul class="list-unstyled small">
+                            <li>1. Check if the backend server is running</li>
+                            <li>2. Verify your internet connection</li>
+                            <li>3. Try refreshing the page</li>
+                        </ul>
+                    </div>
+                `;
+            }
+            
+            errorMessage.innerHTML = errorMsg;
             errorMessage.classList.remove('d-none');
+            errorMessage.scrollIntoView({ behavior: 'smooth' });
+            
         } finally {
             // Reset button state
             buttonText.textContent = 'Create Account';
@@ -173,8 +235,16 @@ function isValidPhone(phone) {
 
 // Validate password strength
 function isValidPassword(password) {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    return passwordRegex.test(password);
+    // Minimum 8 characters, must contain at least two of the following:
+    // uppercase, lowercase, numbers
+    if (password.length < 8) return false;
+    
+    let criteria = 0;
+    if (/[A-Z]/.test(password)) criteria++;
+    if (/[a-z]/.test(password)) criteria++;
+    if (/[0-9]/.test(password)) criteria++;
+    
+    return criteria >= 2;
 }
 
 // Real-time password strength validation
@@ -187,18 +257,27 @@ function validatePasswordStrength() {
         return;
     }
     
-    const hasUpperCase = /[A-Z]/.test(password.value);
-    const hasLowerCase = /[a-z]/.test(password.value);
-    const hasNumbers = /\d/.test(password.value);
-    const hasSpecialChar = /[@$!%*?&]/.test(password.value);
+    let criteria = 0;
+    if (/[A-Z]/.test(password.value)) criteria++;
+    if (/[a-z]/.test(password.value)) criteria++;
+    if (/[0-9]/.test(password.value)) criteria++;
     
-    if (hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar) {
+    if (criteria >= 2) {
         password.classList.remove('is-invalid');
         password.classList.add('is-valid');
     } else {
         password.classList.add('is-invalid');
         password.classList.remove('is-valid');
     }
+}
+
+function calculatePasswordStrength(password) {
+    let strength = 0;
+    if (password.length >= 8) strength++;
+    if (/[A-Z]/.test(password)) strength++;
+    if (/[a-z]/.test(password)) strength++;
+    if (/[0-9]/.test(password)) strength++;
+    return Math.min(strength, 3);
 }
 
 // Real-time password match validation
@@ -222,4 +301,251 @@ document.querySelectorAll('.social-btn').forEach(button => {
         // Implement social login functionality here
         alert('Social login functionality will be implemented soon!');
     });
+});
+
+// Password strength indicator
+function updatePasswordStrengthIndicator(password) {
+    const strengthBar = document.createElement('div');
+    strengthBar.className = 'password-strength-bar mt-2';
+    
+    const strength = calculatePasswordStrength(password);
+    let strengthText = '';
+    let strengthClass = '';
+    
+    switch(strength) {
+        case 0:
+            strengthText = 'Very Weak';
+            strengthClass = 'bg-danger';
+            break;
+        case 1:
+            strengthText = 'Weak';
+            strengthClass = 'bg-warning';
+            break;
+        case 2:
+            strengthText = 'Medium';
+            strengthClass = 'bg-info';
+            break;
+        case 3:
+            strengthText = 'Strong';
+            strengthClass = 'bg-success';
+            break;
+    }
+    
+    strengthBar.innerHTML = `
+        <div class="progress" style="height: 5px;">
+            <div class="progress-bar ${strengthClass}" style="width: ${(strength + 1) * 25}%"></div>
+        </div>
+        <small class="text-muted mt-1">${strengthText}</small>
+    `;
+    
+    const existingBar = document.querySelector('.password-strength-bar');
+    if (existingBar) {
+        existingBar.remove();
+    }
+    passwordInput.parentElement.appendChild(strengthBar);
+}
+
+// Enhanced password validation
+passwordInput.addEventListener('input', function() {
+    updatePasswordStrengthIndicator(this.value);
+    validatePasswordStrength();
+});
+
+// Add debounce function for email validation
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Email availability check
+const checkEmailAvailability = debounce(async (email) => {
+    try {
+        const response = await fetch(`http://localhost:5000/api/auth/check-email?email=${encodeURIComponent(email)}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        const emailInput = document.getElementById('email');
+        const emailFeedback = document.createElement('div');
+        emailFeedback.className = 'email-feedback mt-1';
+        
+        if (data.available) {
+            emailInput.classList.remove('is-invalid');
+            emailInput.classList.add('is-valid');
+            emailFeedback.innerHTML = '<small class="text-success"><i class="fas fa-check-circle"></i> Email is available</small>';
+        } else {
+            emailInput.classList.remove('is-valid');
+            emailInput.classList.add('is-invalid');
+            emailFeedback.innerHTML = `
+                <div class="text-danger">
+                    <small><i class="fas fa-exclamation-circle"></i> Email already registered</small>
+                    <div class="mt-2">
+                        <a href="login.html" class="btn btn-sm btn-outline-primary me-2">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="forgot-password.html" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-key"></i> Reset Password
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        const existingFeedback = emailInput.parentElement.querySelector('.email-feedback');
+        if (existingFeedback) {
+            existingFeedback.remove();
+        }
+        emailInput.parentElement.appendChild(emailFeedback);
+        
+        // Disable submit button if email is taken
+        const submitButton = document.getElementById('registerButton');
+        submitButton.disabled = !data.available;
+        
+    } catch (error) {
+        console.error('Email check failed:', error);
+    }
+}, 500);
+
+// Add email validation listener with immediate feedback
+const emailInput = document.getElementById('email');
+emailInput.addEventListener('input', function() {
+    const email = this.value.trim();
+    
+    // Remove any existing feedback
+    const existingFeedback = this.parentElement.querySelector('.email-feedback');
+    if (existingFeedback) {
+        existingFeedback.remove();
+    }
+    
+    // Basic email format validation
+    if (email && !isValidEmail(email)) {
+        this.classList.add('is-invalid');
+        const emailFeedback = document.createElement('div');
+        emailFeedback.className = 'email-feedback mt-1';
+        emailFeedback.innerHTML = '<small class="text-danger"><i class="fas fa-exclamation-circle"></i> Please enter a valid email address</small>';
+        this.parentElement.appendChild(emailFeedback);
+        return;
+    }
+    
+    // If email format is valid, check availability
+    if (email && isValidEmail(email)) {
+        checkEmailAvailability(email);
+    } else {
+        this.classList.remove('is-valid', 'is-invalid');
+    }
+});
+
+// Update form submission to prevent duplicate email registration
+registerForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const email = emailInput.value.trim();
+    
+    // Check email availability one last time before submission
+    try {
+        const response = await fetch(`http://localhost:5000/api/auth/check-email?email=${encodeURIComponent(email)}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.available) {
+            errorMessage.innerHTML = `
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <div>This email is already registered!</div>
+                    <div class="mt-3">
+                        <a href="login.html" class="btn btn-primary me-2">
+                            <i class="fas fa-sign-in-alt"></i> Login Instead
+                        </a>
+                        <a href="forgot-password.html" class="btn btn-secondary">
+                            <i class="fas fa-key"></i> Reset Password
+                        </a>
+                    </div>
+                </div>
+            `;
+            errorMessage.classList.remove('d-none');
+            errorMessage.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+    } catch (error) {
+        console.error('Final email check failed:', error);
+    }
+    
+    // Continue with the rest of the form submission
+    // ... rest of your existing form submission code ...
+});
+
+// Add this function at the top of your file
+async function checkServerConnection() {
+    try {
+        const response = await fetch('http://localhost:5000/api/health', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        return response.ok;
+    } catch (error) {
+        return false;
+    }
+}
+
+// Add this function to show server status
+function showServerStatus(isConnected) {
+    const statusDiv = document.createElement('div');
+    statusDiv.className = `server-status alert ${isConnected ? 'alert-success' : 'alert-danger'} mb-3`;
+    statusDiv.innerHTML = isConnected ? 
+        '<i class="fas fa-check-circle"></i> Server is connected' :
+        '<i class="fas fa-exclamation-circle"></i> Server is offline. Please start the backend server.';
+    
+    const existingStatus = document.querySelector('.server-status');
+    if (existingStatus) {
+        existingStatus.remove();
+    }
+    
+    const form = document.getElementById('registerForm');
+    form.parentElement.insertBefore(statusDiv, form);
+    
+    // Disable/Enable form based on server status
+    const submitButton = document.getElementById('registerButton');
+    submitButton.disabled = !isConnected;
+    if (!isConnected) {
+        submitButton.innerHTML = '<i class="fas fa-exclamation-circle"></i> Server Offline';
+    } else {
+        submitButton.innerHTML = `
+            <span class="button-text">Create Account</span>
+            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+        `;
+    }
+}
+
+// Add automatic server checking
+document.addEventListener('DOMContentLoaded', async function() {
+    // Initial server check
+    const isConnected = await checkServerConnection();
+    showServerStatus(isConnected);
+    
+    // Periodic server checking every 10 seconds
+    setInterval(async () => {
+        const isConnected = await checkServerConnection();
+        showServerStatus(isConnected);
+    }, 10000);
+    
+    // ... rest of your DOMContentLoaded code ...
 }); 

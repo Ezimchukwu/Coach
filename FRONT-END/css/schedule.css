@@ -1,0 +1,213 @@
+/* Schedule Page Styles */
+:root {
+    --primary-color: #2B6777;
+    --secondary-color: #C8D8E4;
+    --accent-color: #52AB98;
+    --background-color: #F2F2F2;
+    --text-color: #333333;
+}
+
+.calendar-controls {
+    background-color: var(--background-color);
+    padding: 1rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+    padding: 15px;
+}
+
+.calendar-day {
+    background-color: white;
+    border: 1px solid var(--secondary-color);
+    border-radius: 8px;
+    padding: 10px;
+    min-height: 120px;
+}
+
+.calendar-day.today {
+    border-color: var(--primary-color);
+    background-color: var(--secondary-color);
+}
+
+.time-slot {
+    padding: 5px;
+    margin: 2px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.time-slot:hover {
+    background-color: var(--accent-color);
+    color: white;
+}
+
+.time-slot.available {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+}
+
+.time-slot.booked {
+    background-color: var(--primary-color);
+    color: white;
+    cursor: not-allowed;
+}
+
+.coach-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--secondary-color);
+}
+
+.coach-item:hover {
+    background-color: var(--background-color);
+}
+
+.coach-photo {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 15px;
+    border: 2px solid var(--accent-color);
+}
+
+.coach-info h5 {
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.coach-info p {
+    color: var(--text-color);
+    margin-bottom: 0;
+}
+
+.session-item {
+    background-color: white;
+    border-left: 4px solid var(--accent-color);
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.session-item:hover {
+    transform: translateX(5px);
+    transition: transform 0.3s ease;
+}
+
+.session-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.session-title {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.session-time {
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.session-coach {
+    display: flex;
+    align-items: center;
+}
+
+.session-coach img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.day-header {
+    text-align: center;
+    padding: 0.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    font-weight: 500;
+}
+
+.day-slots {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+}
+
+.coach-rating {
+    color: #ffc107;
+}
+
+.session-item:last-child {
+    border-bottom: none;
+}
+
+.bg-gradient {
+    background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
+}
+
+.animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .calendar-grid {
+        grid-template-columns: repeat(1, 1fr);
+    }
+
+    .calendar-day {
+        margin-bottom: 1rem;
+    }
+
+    .day-slots {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .time-slot {
+        width: calc(50% - 0.5rem);
+    }
+} 
