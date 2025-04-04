@@ -8,31 +8,75 @@ const Activity = require('../models/Activity');
 const Goal = require('../models/Goal');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+
+// Create uploads directory if it doesn't exist
+const uploadDir = path.join(__dirname, '..', 'uploads');
+const profileUploadsDir = path.join(uploadDir, 'profiles');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+if (!fs.existsSync(profileUploadsDir)) {
+    fs.mkdirSync(profileUploadsDir, { recursive: true });
+}
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
-        cb(null, 'uploads/');
+        cb(null, profileUploadsDir);
     },
     filename: function(req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname));
+        // Create a unique filename with original extension
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
 
+// File filter function
+const fileFilter = (req, file, cb) => {
+    // Accept images only
+    if (!file.type.startsWith('image/')) {
+        return cb(new Error('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+};
+
+// Configure multer upload
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-    fileFilter: function(req, file, cb) {
-        const filetypes = /jpeg|jpg|png/;
-        const mimetype = filetypes.test(file.mimetype);
-        const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        
-        if (mimetype && extname) {
-            return cb(null, true);
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+        files: 1 // Only 1 file per request
+    },
+    fileFilter: fileFilter
+}).single('photo'); // 'photo' is the field name
+
+// Wrapper for handling multer upload with better error handling
+const handleUpload = (req, res, next) => {
+    upload(req, res, function(err) {
+        if (err instanceof multer.MulterError) {
+            // A Multer error occurred when uploading
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'File is too large. Maximum size is 5MB'
+                });
+            }
+            return res.status(400).json({
+                success: false,
+                message: err.message
+            });
+        } else if (err) {
+            // An unknown error occurred
+            return res.status(400).json({
+                success: false,
+                message: err.message || 'Error uploading file'
+            });
         }
-        cb(new Error('Only .png, .jpg and .jpeg format allowed!'));
-    }
-});
+        // Everything went fine
+        next();
+    });
+};
 
 // Get user dashboard data
 router.get('/data', auth, async (req, res) => {
@@ -106,29 +150,63 @@ router.patch('/profile', auth, async (req, res) => {
     }
 });
 
-// Upload profile photo
-router.post('/profile/photo', auth, upload.single('photo'), async (req, res) => {
+// Upload profile photo with improved error handling
+router.post('/profile/photo', auth, handleUpload, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
                 success: false,
-                message: 'No file uploaded'
+                message: 'Please select an image to upload'
             });
         }
 
         const user = await User.findById(req.user.id);
-        user.photo = `/uploads/${req.file.filename}`;
+        if (!user) {
+            // Delete uploaded file if user not found
+            if (req.file) {
+                const filePath = path.join(profileUploadsDir, req.file.filename);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            }
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+        
+        // Delete old photo if it exists
+        if (user.photo && user.photo !== 'default.jpg') {
+            const oldPhotoPath = path.join(profileUploadsDir, path.basename(user.photo));
+            if (fs.existsSync(oldPhotoPath)) {
+                fs.unlinkSync(oldPhotoPath);
+            }
+        }
+
+        // Update user's photo path
+        const photoUrl = `/uploads/profiles/${req.file.filename}`;
+        user.photo = photoUrl;
         await user.save();
 
         res.json({
             success: true,
-            data: { photoUrl: user.photo }
+            data: {
+                photoUrl: photoUrl,
+                message: 'Profile photo updated successfully'
+            }
         });
     } catch (error) {
         console.error('Photo upload error:', error);
+        // If an error occurs, try to delete the uploaded file
+        if (req.file) {
+            const filePath = path.join(profileUploadsDir, req.file.filename);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
         res.status(500).json({
             success: false,
-            message: 'Error uploading photo'
+            message: 'Error updating profile photo'
         });
     }
 });

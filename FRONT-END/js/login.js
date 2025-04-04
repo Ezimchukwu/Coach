@@ -1,3 +1,6 @@
+// Constants
+const API_URL = 'http://localhost:5000/api';
+
 // Initialize AOS
 AOS.init({
     duration: 800,
@@ -110,7 +113,7 @@ loginForm.addEventListener('submit', async (e) => {
     loginButton.disabled = true;
     
     try {
-        const response = await fetch('http://localhost:5000/api/auth/login', {
+        const response = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -127,14 +130,32 @@ loginForm.addEventListener('submit', async (e) => {
             throw new Error(data.message || 'Login failed');
         }
 
+        console.log('Login successful, user data:', data.data.user);
+            
+        // Set session with complete user data
+        setSession(data.token, data.data.user);
+        
+        // Also store specific fields in local storage for easier access
+        const user = data.data.user;
+        if (user) {
+            console.log('Setting local storage user fields:', {
+                email: user.email,
+                name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+            });
+            
+            if (user.email) localStorage.setItem('userEmail', user.email);
+            if (user.firstName && user.lastName) {
+                localStorage.setItem('userName', `${user.firstName} ${user.lastName}`);
+            } else if (user.email) {
+                localStorage.setItem('userName', user.email.split('@')[0]);
+            }
+        }
+        
         // Show success message with animation
         showSuccess('Login successful! Redirecting to dashboard...');
             loginButton.classList.add('d-none');
             logoutButton.classList.remove('d-none');
             
-        // Set session
-        setSession(data.token, data.data.user);
-        
         // Show progress bar
         let progress = 0;
         const progressBar = document.createElement('div');
@@ -166,7 +187,7 @@ loginForm.addEventListener('submit', async (e) => {
 // Logout functionality
 logoutButton.addEventListener('click', async () => {
     try {
-        await fetch('http://localhost:5000/api/auth/logout', {
+        await fetch(`${API_URL}/auth/logout`, {
             method: 'POST'
         });
     } catch (error) {

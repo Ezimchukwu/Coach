@@ -8,13 +8,21 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/loading.css" rel="stylesheet">
 </head>
 <body class="dashboard-body">
     <!-- Sidebar Navigation -->
     <nav class="sidebar">
         <div class="sidebar-header">
-            <img src="images/logo.png" alt="CoachPro Elite" class="logo">
-            <h1>CoachPro Elite</h1>
+            <div class="coach-brand">
+                <div class="coach-photo-wrapper">
+                    <img src="images/hero-image.jpg" alt="Coach Profile" class="coach-brand-photo" id="coachBrandPhoto">
+                </div>
+                <div class="coach-brand-info">
+                    <h1>CoachPro Elite</h1>
+                    <p class="coach-title">Professional Coach</p>
+                </div>
+            </div>
         </div>
         <div class="sidebar-user">
             <div class="user-photo">
@@ -64,10 +72,6 @@
                 <i class="fas fa-cog"></i>
                 <span>Settings</span>
             </button>
-            <button class="btn btn-link nav-link" id="logoutBtn" onclick="handleLogout()">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Logout</span>
-            </button>
         </div>
     </nav>
 
@@ -98,6 +102,10 @@
                         <li><a class="dropdown-item" href="resources.html#new-resource"><i class="fas fa-file-alt me-2"></i>New Resource</a></li>
                     </ul>
                 </div>
+                <button class="btn btn-outline-danger ms-2 top-logout-btn" onclick="handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="d-none d-md-inline-block ms-1">Logout</span>
+                </button>
             </div>
         </header>
 
@@ -231,7 +239,7 @@
                 <div class="col-lg-4">
                     <!-- Profile Card -->
                     <div class="dashboard-card profile-card">
-                        <div class="profile-cover" style="background-image: url('${user.coverPhoto || '/images/default-cover.jpg'}')">
+                        <div class="profile-cover" style="background-image: url('/images/default-cover.jpg')">
                             <button class="btn btn-light btn-sm cover-upload-btn" onclick="document.getElementById('coverPhotoInput').click()">
                                 <i class="fas fa-camera"></i>
                             </button>
@@ -243,8 +251,8 @@
                                     <i class="fas fa-camera"></i>
                                 </button>
                             </div>
-                            <h4 class="mb-1" id="profileName">Your Name</h4>
-                            <p class="text-muted mb-3" id="profileEmail">your.email@example.com</p>
+                            <h4 class="mb-1" id="profileHeaderName">Your Name</h4>
+                            <p class="text-muted mb-3" id="profileHeaderEmail">your.email@example.com</p>
                             <div class="profile-actions">
                                 <button class="btn btn-primary" onclick="editProfile()">
                                     <i class="fas fa-edit me-2"></i>Edit Profile
@@ -287,6 +295,41 @@
                                 </div>
                                 <div class="progress">
                                     <div class="progress-bar bg-warning" style="width: 60%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Profile Details Section -->
+                    <div class="dashboard-card mb-4 profile-details-card">
+                        <div class="card-header">
+                            <h5 class="card-title">Profile Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Full Name</h6>
+                                    <div id="profileName" class="profile-detail">Loading...</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Email</h6>
+                                    <div id="profileEmail" class="profile-detail">Loading...</div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Phone</h6>
+                                    <div id="profilePhone" class="profile-detail">Loading...</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted">Location</h6>
+                                    <div id="profileLocation" class="profile-detail">Loading...</div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6 class="text-muted">Bio</h6>
+                                    <div id="profileBio" class="profile-detail" style="min-height: 80px; padding: 15px; white-space: pre-wrap;">Loading...</div>
                                 </div>
                             </div>
                         </div>
@@ -342,12 +385,16 @@
                             <input type="text" class="form-control" id="editName" required>
                         </div>
                         <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="editEmail" required>
+                        </div>
+                        <div class="mb-3">
                             <label class="form-label">Phone</label>
                             <input type="tel" class="form-control" id="editPhone">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Location</label>
-                            <input type="text" class="form-control" id="editLocation">
+                            <input type="text" class="form-control" id="editLocation" placeholder="Street, City, State">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Bio</label>

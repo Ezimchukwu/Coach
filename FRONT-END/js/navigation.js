@@ -59,32 +59,92 @@ async function updateUserProfile() {
         const session = checkSession();
         if (!session) return;
 
-        const response = await fetch(`${API_BASE_URL}/users/me`, {
+        // Use session data for immediate display while API call is in progress
+        const sessionUser = session.user;
+        if (sessionUser) {
+            console.log('Session user data:', sessionUser);
+            
+            // Immediately update UI with session data
+            updateProfileUI({
+                firstName: sessionUser.firstName || '',
+                lastName: sessionUser.lastName || '',
+                email: sessionUser.email || 'user@example.com',
+                photo: sessionUser.photo || 'images/default-avatar.png'
+            });
+        }
+
+        // Then try to get fresh data from API
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
             headers: {
                 'Authorization': `Bearer ${session.token}`
             }
         });
 
-        if (!response.ok) throw new Error('Failed to fetch user profile');
-
-        const user = await response.json();
-        
-        // Update profile photo and name
-        const profilePhoto = document.querySelector('.profile-photo');
-        const userName = document.getElementById('userName');
-        
-        if (profilePhoto) {
-            profilePhoto.src = user.photo || 'images/default-avatar.png';
-        }
-        
-        if (userName) {
-            userName.textContent = user.name;
+        if (!response.ok) {
+            console.error('API error:', response.status, response.statusText);
+            return; // Already displayed session data, so no need to show error
         }
 
-        // Update notification badges
-        updateNotificationBadges(user.notifications, user.messages);
+        const result = await response.json();
+        console.log('User profile data from API:', result);
+        
+        if (result.data && result.data.user) {
+            // Update UI with fresh data from API
+            updateProfileUI(result.data.user);
+        }
     } catch (error) {
         console.error('Error updating user profile:', error);
+        // Already displayed session data, so just log the error
+    }
+}
+
+function updateProfileUI(user) {
+    // Update profile photo and name
+    const profilePhoto = document.querySelector('.profile-photo');
+    const userName = document.getElementById('userName');
+    const userEmail = document.getElementById('userEmail');
+    
+    console.log('Updating profile UI with user data:', user);
+    
+    // Try to get user email from multiple sources
+    const email = user.email || localStorage.getItem('userEmail') || JSON.parse(localStorage.getItem('session'))?.user?.email || 'user@example.com';
+    
+    if (profilePhoto) {
+        // Ensure there's a fallback image path
+        const defaultImagePath = 'images/default-avatar.png';
+        profilePhoto.src = user.photo || defaultImagePath;
+        
+        // Add error handler in case the image fails to load
+        profilePhoto.onerror = function() {
+            this.src = defaultImagePath;
+            console.log('Profile image failed to load, using default');
+        };
+    }
+    
+    if (userName) {
+        // Use firstName and lastName if available, otherwise fallback to email
+        if (user.firstName || user.lastName) {
+            userName.textContent = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        } else {
+            const storedName = localStorage.getItem('userName');
+            userName.textContent = storedName || email.split('@')[0] || 'User';
+        }
+    }
+    
+    // Update email element if it exists
+    if (userEmail) {
+        console.log('Setting user email to:', email);
+        userEmail.textContent = email;
+        
+        // Also update localStorage to ensure consistency
+        if (email && email !== 'user@example.com') {
+            localStorage.setItem('userEmail', email);
+        }
+    }
+
+    // Update notification badges if they exist in the response
+    if (user.notifications || user.messages) {
+        updateNotificationBadges(user.notifications, user.messages);
     }
 }
 
@@ -105,25 +165,17 @@ function updateNotificationBadges(notifications = 0, messages = 0) {
 
 async function handleLogout() {
     try {
-        const session = checkSession();
-        if (!session) return;
-
-        // Call logout endpoint
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${session.token}`
-            }
-        });
-
-        // Clear local storage
+        console.log('Attempting to logout...'); // Debug log
+        
+        // Clear local storage first
         localStorage.removeItem('session');
         
-        // Redirect to login
-        redirectToLogin();
+        // Redirect to login page
+        window.location.href = 'login.html';
     } catch (error) {
         console.error('Error during logout:', error);
-        showToast('error', 'Failed to logout');
+        // Ensure we still redirect even if there's an error
+        window.location.href = 'login.html';
     }
 }
 
