@@ -30,10 +30,35 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize navigation elements
     initializeNavigation();
     
+    // Handle mobile sidebar toggle
+    const navbarToggler = document.querySelector('.navbar-toggler');
+    const sidebar = document.querySelector('.sidebar');
+
+    if (navbarToggler && sidebar) {
+        navbarToggler.addEventListener('click', () => {
+            sidebar.classList.toggle('show');
+        });
+    }
+
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', (event) => {
+        if (window.innerWidth <= 768) {
+            const isClickInside = sidebar.contains(event.target) || 
+                                navbarToggler.contains(event.target);
+            
+            if (!isClickInside && sidebar.classList.contains('show')) {
+                sidebar.classList.remove('show');
+            }
+        }
+    });
+
     // Handle logout
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', handleLogout);
+        logoutBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleLogout();
+        });
     }
 });
 
@@ -69,7 +94,7 @@ async function updateUserProfile() {
                 firstName: sessionUser.firstName || '',
                 lastName: sessionUser.lastName || '',
                 email: sessionUser.email || 'user@example.com',
-                photo: sessionUser.photo || 'images/default-avatar.png'
+                photo: sessionUser.photo || '../images/default-avatar.svg'
             });
         }
 
@@ -89,8 +114,18 @@ async function updateUserProfile() {
         console.log('User profile data from API:', result);
         
         if (result.data && result.data.user) {
+            const userData = result.data.user;
             // Update UI with fresh data from API
-            updateProfileUI(result.data.user);
+            updateProfileUI({
+                firstName: userData.firstName || '',
+                lastName: userData.lastName || '',
+                email: userData.email || 'user@example.com',
+                photo: userData.photo || '../images/default-avatar.svg'
+            });
+            
+            // Update session data with fresh data
+            session.user = userData;
+            localStorage.setItem('session', JSON.stringify(session));
         }
     } catch (error) {
         console.error('Error updating user profile:', error);
@@ -99,9 +134,9 @@ async function updateUserProfile() {
 }
 
 function updateProfileUI(user) {
-    // Update profile photo and name
-    const profilePhoto = document.querySelector('.profile-photo');
-    const userName = document.getElementById('userName');
+        // Update profile photo and name
+    const profilePhotos = document.querySelectorAll('.profile-photo, #navProfilePhoto');
+        const userName = document.getElementById('userName');
     const userEmail = document.getElementById('userEmail');
     
     console.log('Updating profile UI with user data:', user);
@@ -109,19 +144,60 @@ function updateProfileUI(user) {
     // Try to get user email from multiple sources
     const email = user.email || localStorage.getItem('userEmail') || JSON.parse(localStorage.getItem('session'))?.user?.email || 'user@example.com';
     
-    if (profilePhoto) {
-        // Ensure there's a fallback image path
-        const defaultImagePath = 'images/default-avatar.png';
-        profilePhoto.src = user.photo || defaultImagePath;
+    // Update all profile photo elements
+    profilePhotos.forEach(photo => {
+        if (photo) {
+            // Ensure there's a fallback image path
+            const defaultImagePath = '../images/default-avatar.svg';
+            
+            // Get the photo URL from user data
+            let photoUrl = user.photo;
+            
+            // Only update the src if we have a new photo URL
+            if (photoUrl) {
+                // Handle both relative and absolute URLs
+                if (photoUrl.startsWith('http')) {
+                    photo.src = photoUrl;
+                } else if (photoUrl.startsWith('/uploads/')) {
+                    photo.src = `${API_BASE_URL.replace('/api', '')}${photoUrl}`;
+                } else if (!photoUrl.startsWith('../')) {
+                    photo.src = `${API_BASE_URL.replace('/api', '')}/uploads/${photoUrl}`;
+                } else {
+                    photo.src = photoUrl;
+                }
+                
+                // Store the photo URL in localStorage for persistence
+                localStorage.setItem('userProfilePhoto', photoUrl);
+            } else {
+                // Try to get the photo URL from localStorage if not in user data
+                const storedPhotoUrl = localStorage.getItem('userProfilePhoto');
+                if (storedPhotoUrl) {
+                    if (storedPhotoUrl.startsWith('http')) {
+                        photo.src = storedPhotoUrl;
+                    } else if (storedPhotoUrl.startsWith('/uploads/')) {
+                        photo.src = `${API_BASE_URL.replace('/api', '')}${storedPhotoUrl}`;
+                    } else if (!storedPhotoUrl.startsWith('../')) {
+                        photo.src = `${API_BASE_URL.replace('/api', '')}/uploads/${storedPhotoUrl}`;
+                    } else {
+                        photo.src = storedPhotoUrl;
+                    }
+                } else {
+                    photo.src = defaultImagePath;
+                }
+            }
+            
+            // Add error handler in case the image fails to load
+            photo.onerror = function() {
+                console.error('Failed to load image:', this.src);
+                if (this.src !== defaultImagePath) {
+                    this.src = defaultImagePath;
+                    console.log('Profile image failed to load, using default');
+                }
+            };
+        }
+    });
         
-        // Add error handler in case the image fails to load
-        profilePhoto.onerror = function() {
-            this.src = defaultImagePath;
-            console.log('Profile image failed to load, using default');
-        };
-    }
-    
-    if (userName) {
+        if (userName) {
         // Use firstName and lastName if available, otherwise fallback to email
         if (user.firstName || user.lastName) {
             userName.textContent = `${user.firstName || ''} ${user.lastName || ''}`.trim();
@@ -165,16 +241,32 @@ function updateNotificationBadges(notifications = 0, messages = 0) {
 
 async function handleLogout() {
     try {
-        console.log('Attempting to logout...'); // Debug log
-        
-        // Clear local storage first
-        localStorage.removeItem('session');
+        const token = localStorage.getItem('token');
+        const serverPort = localStorage.getItem('serverPort') || '5000';
+
+        // Call logout endpoint
+        const response = await fetch(`http://localhost:${serverPort}/auth/logout`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Logout failed');
+        }
+
+        // Clear local storage
+        localStorage.removeItem('token');
+        localStorage.removeItem('serverPort');
         
         // Redirect to login page
         window.location.href = 'login.html';
     } catch (error) {
         console.error('Error during logout:', error);
-        // Ensure we still redirect even if there's an error
+        // Still clear local storage and redirect even if the server request fails
+        localStorage.removeItem('token');
+        localStorage.removeItem('serverPort');
         window.location.href = 'login.html';
     }
 }

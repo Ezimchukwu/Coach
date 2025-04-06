@@ -1,6 +1,29 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+// Define settings schema
+const settingsSchema = new mongoose.Schema({
+    notifications: {
+        sessionReminders: { type: Boolean, default: true },
+        reminderTime: { type: String, default: '30' },
+        messages: { type: Boolean, default: true },
+        achievements: { type: Boolean, default: true },
+        resources: { type: Boolean, default: false }
+    },
+    communication: {
+        preferredMethod: { type: String, default: 'email' },
+        timeZone: { type: String, default: 'UTC' }
+    },
+    privacy: {
+        profileVisibility: { type: String, default: 'public' },
+        shareAchievements: { type: Boolean, default: true },
+        shareProgress: { type: Boolean, default: false }
+    },
+    security: {
+        twoFactorEnabled: { type: Boolean, default: false }
+    }
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -29,8 +52,13 @@ const userSchema = new mongoose.Schema({
         enum: ['user', 'coach', 'admin'],
         default: 'user'
     },
+    settings: {
+        type: settingsSchema,
+        default: () => ({})
+    },
     bio: String,
     location: String,
+    phoneNumber: String,
     website: String,
     passwordResetToken: String,
     passwordResetExpires: Date,

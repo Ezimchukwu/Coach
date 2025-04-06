@@ -1,5 +1,8 @@
 // Constants
-const API_URL = 'http://localhost:5000/api';
+const API_URL = (() => {
+    const serverPort = localStorage.getItem('serverPort') || '5000';
+    return `http://localhost:${serverPort}/api`;
+})();
 
 // Initialize AOS
 AOS.init({
@@ -7,6 +10,30 @@ AOS.init({
     easing: 'ease-out',
     once: true
 });
+
+// Check server port before login
+async function checkServerPort() {
+    try {
+        // Try ports from 5000 to 5010
+        for (let port = 5000; port <= 5010; port++) {
+            try {
+                const response = await fetch(`http://localhost:${port}/api/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('serverPort', port.toString());
+                    console.log(`Server found on port ${port}`);
+                    return port;
+                }
+            } catch (err) {
+                continue; // Try next port
+            }
+        }
+        throw new Error('Could not find server on any port');
+    } catch (error) {
+        console.error('Error checking server port:', error);
+        return 5000; // Default to 5000 if we can't find the server
+    }
+}
 
 // DOM Elements
 const loginForm = document.getElementById('loginForm');
@@ -113,10 +140,20 @@ loginForm.addEventListener('submit', async (e) => {
     loginButton.disabled = true;
     
     try {
-        const response = await fetch(`${API_URL}/auth/login`, {
+        // Check server port first
+        await checkServerPort();
+        
+        // Get the latest API URL with the correct port
+        const currentApiUrl = (() => {
+            const serverPort = localStorage.getItem('serverPort') || '5000';
+            return `http://localhost:${serverPort}/api`;
+        })();
+
+        const response = await fetch(`${currentApiUrl}/auth/login`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({
                 email,

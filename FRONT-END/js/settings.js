@@ -1,5 +1,8 @@
 // Constants
-const API_URL = 'http://localhost:5000/api';
+const API_URL = (() => {
+    const serverPort = localStorage.getItem('serverPort') || '5000';
+    return `http://localhost:${serverPort}/api`;
+})();
 const PASSWORD_STRENGTH_LEVELS = {
     0: { class: 'very-weak', text: 'Too weak' },
     1: { class: 'weak', text: 'Weak' },
@@ -152,6 +155,30 @@ class PasswordStrengthChecker {
 
 // Settings Manager
 class SettingsManager {
+    static gatherSettings() {
+        return {
+            notifications: {
+                sessionReminders: elements.inputs.sessionReminders?.checked || false,
+                reminderTime: elements.inputs.reminderTime?.value || '1hour',
+                messages: elements.inputs.messageNotifs?.checked || false,
+                achievements: elements.inputs.achievementNotifs?.checked || false,
+                resources: elements.inputs.resourceNotifs?.checked || false
+            },
+            communication: {
+                preferredMethod: elements.inputs.contactPreference?.value || 'email',
+                timeZone: elements.inputs.timeZone?.value || 'UTC'
+            },
+            privacy: {
+                profileVisibility: elements.inputs.profileVisibility?.value || 'public',
+                shareAchievements: elements.inputs.shareAchievements?.checked || false,
+                shareProgress: elements.inputs.shareProgress?.checked || false
+            },
+            security: {
+                twoFactorAuth: elements.inputs.twoFactorAuth?.checked || false
+            }
+        };
+    }
+
     static async saveSettings() {
         try {
             const token = getAuthToken();
@@ -159,10 +186,12 @@ class SettingsManager {
                 throw new Error('You are not logged in. Please log in and try again.');
             }
             
-            console.log('Saving settings...');
+            console.log('Gathering settings to save...');
+            const settings = SettingsManager.gatherSettings();
+            console.log('Settings to save:', settings);
+            
             showToast('info', 'Saving your settings...');
             
-            const settings = this.gatherSettings();
             const response = await fetchWithRetry(`${API_URL}/settings`, {
                 method: 'PATCH',
                 headers: {
@@ -172,106 +201,73 @@ class SettingsManager {
                 body: JSON.stringify(settings)
             });
 
+            const data = await response.json();
+            console.log('Server response:', data);
+
             if (!response.ok) {
-                const data = await response.json().catch(() => ({}));
-                throw new Error(data.message || 'Failed to save settings');
+                throw new Error(data.message || `Failed to save settings (${response.status})`);
             }
             
             console.log('Settings saved successfully!');
             showToast('success', 'Settings saved successfully!');
+            
+            // Reload settings to confirm changes
+            await SettingsManager.loadSettings();
         } catch (error) {
             console.error('Save settings error:', error);
             showToast('error', `Failed to save settings: ${error.message}`);
-        }
-    }
-
-    static gatherSettings() {
-        return {
-            notifications: {
-                sessionReminders: elements.inputs.sessionReminders.checked,
-                reminderTime: elements.inputs.reminderTime.value,
-                messages: elements.inputs.messageNotifs.checked,
-                achievements: elements.inputs.achievementNotifs.checked,
-                resources: elements.inputs.resourceNotifs.checked
-            },
-            communication: {
-                preferredMethod: elements.inputs.contactPreference.value,
-                timeZone: elements.inputs.timeZone.value
-            },
-            privacy: {
-                profileVisibility: elements.inputs.profileVisibility.value,
-                shareAchievements: elements.inputs.shareAchievements.checked,
-                shareProgress: elements.inputs.shareProgress.checked
-            },
-            security: {
-                twoFactorEnabled: elements.inputs.twoFactorAuth.checked
+            
+            // If it's an authentication error, redirect to login
+            if (error.message.toLowerCase().includes('not logged in') || 
+                error.message.toLowerCase().includes('token') ||
+                error.message.toLowerCase().includes('unauthorized')) {
+                window.location.href = '/login.html';
             }
-        };
+        }
     }
 
     static async loadSettings() {
         try {
             const token = getAuthToken();
             if (!token) {
-                throw new Error('You are not logged in. Please log in and try again.');
+                throw new Error('You are not logged in');
             }
-            
-            console.log('Loading settings...');
-            
-            // Initialize loading state for settings form
-            const loadingIndicator = document.getElementById('settingsLoadingIndicator');
-            if (loadingIndicator) loadingIndicator.classList.remove('d-none');
-            
-            // Add a small delay before fetching to avoid rapid requests if page is refreshed
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
+
             const response = await fetchWithRetry(`${API_URL}/settings`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
 
-            // Hide loading indicator
-            if (loadingIndicator) loadingIndicator.classList.add('d-none');
-
+            const data = await response.json();
+            
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `Failed to load settings (${response.status})`);
+                throw new Error(data.message || 'Failed to load settings');
             }
 
-            const data = await response.json().catch(() => null);
-            console.log('Settings loaded:', data);
-            
-            // Check if data is in the expected format
-            if (!data) {
-                throw new Error('No data received from server');
+            // If data.settings is not available, try to use data directly
+            const settingsData = data.settings || data;
+            if (!settingsData) {
+                throw new Error('No settings data available');
             }
-            
-            if (data.data) {
-                this.applySettings(data.data);
-            } else {
-                this.applySettings(data);
-            }
-            
-            showToast('success', 'Settings loaded successfully');
+
+            this.applySettings(settingsData);
+            console.log('Settings loaded successfully');
         } catch (error) {
-            console.error('Load settings error:', error);
-            showToast('error', `Failed to load settings: ${error.message}`);
-            
-            // Use default settings as fallback
+            console.error('Error loading settings:', error);
+            showToast('warning', 'Using default settings. Could not load your saved settings.');
             this.applyDefaultSettings();
         }
     }
 
     static applyDefaultSettings() {
-        console.log('Using default settings');
         const defaultSettings = {
             notifications: {
                 sessionReminders: true,
-                reminderTime: '30',
+                reminderTime: '1hour',
                 messages: true,
                 achievements: true,
-                resources: false
+                resources: true
             },
             communication: {
                 preferredMethod: 'email',
@@ -280,102 +276,42 @@ class SettingsManager {
             privacy: {
                 profileVisibility: 'public',
                 shareAchievements: true,
-                shareProgress: false
+                shareProgress: true
             },
             security: {
-                twoFactorEnabled: false
+                twoFactorAuth: false
             }
         };
-        
-        try {
-            this.applySettings(defaultSettings);
-            showToast('warning', 'Using default settings. Could not load your saved settings.');
-        } catch (error) {
-            console.error('Error applying default settings:', error);
-            // If even that fails, we'll try to set each control individually
-            this.applySettingsSafe(defaultSettings);
-        }
-    }
 
-    static applySettingsSafe(settings) {
-        // A more careful approach that checks each element before trying to set it
-        const { notifications, communication, privacy, security } = settings;
-        
-        // Helper to safely set a checkbox
-        const setCheckbox = (element, value) => {
-            if (element && typeof value === 'boolean') {
-                element.checked = value;
-            }
-        };
-        
-        // Helper to safely set a select value
-        const setSelect = (element, value) => {
-            if (element && value) {
-                // Check if the option exists first
-                const optionExists = Array.from(element.options).some(option => option.value === value);
-                if (optionExists) {
-                    element.value = value;
-                } else if (element.options.length > 0) {
-                    // Fall back to first option
-                    element.selectedIndex = 0;
-                }
-            }
-        };
-        
-        // Apply settings safely
-        try {
-            // Notifications
-            setCheckbox(elements.inputs.sessionReminders, notifications?.sessionReminders);
-            setSelect(elements.inputs.reminderTime, notifications?.reminderTime);
-            setCheckbox(elements.inputs.messageNotifs, notifications?.messages);
-            setCheckbox(elements.inputs.achievementNotifs, notifications?.achievements);
-            setCheckbox(elements.inputs.resourceNotifs, notifications?.resources);
-            
-            // Communication
-            setSelect(elements.inputs.contactPreference, communication?.preferredMethod);
-            setSelect(elements.inputs.timeZone, communication?.timeZone);
-            
-            // Privacy
-            setSelect(elements.inputs.profileVisibility, privacy?.profileVisibility);
-            setCheckbox(elements.inputs.shareAchievements, privacy?.shareAchievements);
-            setCheckbox(elements.inputs.shareProgress, privacy?.shareProgress);
-            
-            // Security
-            setCheckbox(elements.inputs.twoFactorAuth, security?.twoFactorEnabled);
-            
-            console.log('Default settings applied safely');
-        } catch (error) {
-            console.error('Error applying settings safely:', error);
-        }
+        this.applySettings(defaultSettings);
     }
 
     static applySettings(settings) {
-        console.log('Applying settings:', settings);
-        
-        // Validate settings object
-        if (!settings) {
-            console.error('Invalid settings object: null or undefined');
-            this.applyDefaultSettings();
-            return;
+        // Apply notification settings
+        if (settings.notifications) {
+            elements.inputs.sessionReminders.checked = settings.notifications.sessionReminders;
+            elements.inputs.reminderTime.value = settings.notifications.reminderTime;
+            elements.inputs.messageNotifs.checked = settings.notifications.messages;
+            elements.inputs.achievementNotifs.checked = settings.notifications.achievements;
+            elements.inputs.resourceNotifs.checked = settings.notifications.resources;
         }
-        
-        try {
-            // Extract sections with fallbacks
-            const notifications = settings.notifications || {};
-            const communication = settings.communication || {};
-            const privacy = settings.privacy || {};
-            const security = settings.security || {};
-            
-            // Apply settings safely using our helper method
-            this.applySettingsSafe({
-                notifications,
-                communication,
-                privacy,
-                security
-            });
-        } catch (error) {
-            console.error('Error in applySettings:', error);
-            this.applyDefaultSettings();
+
+        // Apply communication settings
+        if (settings.communication) {
+            elements.inputs.contactPreference.value = settings.communication.preferredMethod;
+            elements.inputs.timeZone.value = settings.communication.timeZone;
+        }
+
+        // Apply privacy settings
+        if (settings.privacy) {
+            elements.inputs.profileVisibility.value = settings.privacy.profileVisibility;
+            elements.inputs.shareAchievements.checked = settings.privacy.shareAchievements;
+            elements.inputs.shareProgress.checked = settings.privacy.shareProgress;
+        }
+
+        // Apply security settings
+        if (settings.security) {
+            elements.inputs.twoFactorAuth.checked = settings.security.twoFactorAuth;
         }
     }
 }
@@ -564,9 +500,73 @@ function setupEventListeners() {
     });
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    setupEventListeners();
-    populateTimeZones();
-    SettingsManager.loadSettings();
+// Add event listener for page load
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Initialize navigation first
+        if (typeof initializeNavigation === 'function') {
+            console.log('Initializing navigation...');
+            await initializeNavigation();
+        } else {
+            console.error('Navigation initialization function not found');
+        }
+        
+        // Initialize settings
+        console.log('Loading settings...');
+        await SettingsManager.loadSettings();
+        
+        // Add event listeners for settings form
+        if (elements.buttons.saveSettings) {
+            elements.buttons.saveSettings.addEventListener('click', async () => {
+                try {
+                    await SettingsManager.saveSettings();
+                } catch (error) {
+                    console.error('Error saving settings:', error);
+                    showToast('error', 'Failed to save settings: ' + error.message);
+                }
+            });
+        }
+        
+        if (elements.buttons.resetSettings) {
+            elements.buttons.resetSettings.addEventListener('click', () => {
+                if (confirm('Are you sure you want to reset all settings to default?')) {
+                    SettingsManager.applyDefaultSettings();
+                    showToast('success', 'Settings reset to default');
+                }
+            });
+        }
+        
+        // Initialize password toggles
+        elements.buttons.passwordToggles.forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                const input = this.previousElementSibling;
+                const icon = this.querySelector('i');
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+        });
+        
+        // Initialize password strength checker
+        const newPasswordInput = elements.inputs.newPassword;
+        if (newPasswordInput) {
+            newPasswordInput.addEventListener('input', function() {
+                PasswordStrengthChecker.updateStrengthIndicator(this.value);
+            });
+        }
+
+        // Initialize time zones
+        populateTimeZones();
+
+        console.log('Settings page initialized successfully');
+    } catch (error) {
+        console.error('Error initializing settings page:', error);
+        showToast('error', 'Failed to initialize settings page: ' + error.message);
+    }
 }); 
