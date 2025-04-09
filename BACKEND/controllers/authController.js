@@ -3,6 +3,8 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
+const sendEmail = require('../config/emailConfig');
+const crypto = require('crypto');
 
 // Create and send JWT token
 const createSendToken = async (user, statusCode, res) => {
@@ -28,6 +30,14 @@ exports.signup = async (req, res) => {
     try {
         const { name, email, password, role } = req.body;
 
+        // Validate required fields for signup
+        if (!name || !email || !password) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Please provide name, email and password'
+            });
+        }
+
         // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
@@ -45,7 +55,21 @@ exports.signup = async (req, res) => {
             role: role || 'user'
         });
 
-        await createSendToken(newUser, 201, res);
+        // Remove password from output
+        newUser.password = undefined;
+
+        // Create token
+        const token = jwt.sign(
+            { id: newUser._id },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN }
+        );
+
+        res.status(201).json({
+            status: 'success',
+            token,
+            data: { user: newUser }
+        });
     } catch (err) {
         console.error('Signup error:', err);
         res.status(500).json({
@@ -100,6 +124,7 @@ exports.logout = (req, res) => {
 // Forgot password
 exports.forgotPassword = async (req, res) => {
     try {
+        // 1) Get user based on POSTed email
         const user = await User.findOne({ email: req.body.email });
         if (!user) {
             return res.status(404).json({
@@ -108,20 +133,84 @@ exports.forgotPassword = async (req, res) => {
             });
         }
 
-        // Generate reset token
-        const resetToken = user.createPasswordResetToken();
-        await user.save({ validateBeforeSave: false });
+        // 2) Generate the random reset token
+        const resetToken = crypto.randomBytes(3).toString('hex').toUpperCase(); // 6 character token
+        const hashedToken = crypto
+            .createHash('sha256')
+            .update(resetToken)
+            .digest('hex');
 
-        res.status(200).json({
-            status: 'success',
-            message: 'Token sent to email!',
-            resetToken
-        });
+        // Update user with reset token using findOneAndUpdate
+        await User.findOneAndUpdate(
+            { email: req.body.email },
+            {
+                $set: {
+                    passwordResetToken: hashedToken,
+                    passwordResetExpires: Date.now() + 10 * 60 * 1000 // 10 minutes
+                }
+            },
+            { 
+                new: true,
+                runValidators: false
+            }
+        );
+
+        // 3) Send it to user's email
+        const htmlMessage = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #333; text-align: center;">Password Reset Token</h2>
+                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; text-align: center; margin: 20px 0;">
+                    <h3 style="color: #007bff; font-family: monospace; letter-spacing: 3px; font-size: 24px; margin: 0;">
+                        ${resetToken}
+                    </h3>
+                </div>
+                <p style="color: #666; line-height: 1.6;">
+                    You requested a password reset. Here is your 6-digit reset token. 
+                    Enter this token on the password reset page to set your new password.
+                </p>
+                <p style="color: #dc3545; font-weight: bold;">
+                    This token will expire in 10 minutes.
+                </p>
+                <p style="color: #666;">
+                    If you didn't request this reset, please ignore this email.
+                </p>
+            </div>
+        `;
+
+        try {
+            await sendEmail({
+                email: user.email,
+                subject: 'Your Password Reset Token (valid for 10 minutes)',
+                message: `Your password reset token is: ${resetToken}\n\nEnter this token to reset your password. The token will expire in 10 minutes.\n\nIf you didn't request this reset, please ignore this email.`,
+                html: htmlMessage
+            });
+
+            res.status(200).json({
+                status: 'success',
+                message: 'Token sent to email!'
+            });
+        } catch (err) {
+            // If email fails, remove the reset token
+            await User.findOneAndUpdate(
+                { email: req.body.email },
+                {
+                    $unset: {
+                        passwordResetToken: 1,
+                        passwordResetExpires: 1
+                    }
+                },
+                { runValidators: false }
+            );
+
+            return res.status(500).json({
+                status: 'error',
+                message: 'There was an error sending the email. Try again later!'
+            });
+        }
     } catch (err) {
-        console.error('Forgot password error:', err);
         res.status(500).json({
             status: 'error',
-            message: 'Error sending reset token'
+            message: 'Error generating reset token. Please try again.'
         });
     }
 };
@@ -129,10 +218,43 @@ exports.forgotPassword = async (req, res) => {
 // Reset password
 exports.resetPassword = async (req, res) => {
     try {
-        const user = await User.findOne({
-            passwordResetToken: req.params.token,
-            passwordResetExpires: { $gt: Date.now() }
-        });
+        const { token, password } = req.body;
+
+        // Validate password
+        if (!password || password.length < 8) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Please provide a valid password (min 8 characters)'
+            });
+        }
+
+        // Hash the token
+        const hashedToken = crypto
+            .createHash('sha256')
+            .update(token)
+            .digest('hex');
+
+        // Hash the new password
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        // Find and update user
+        const user = await User.findOneAndUpdate(
+            {
+                passwordResetToken: hashedToken,
+                passwordResetExpires: { $gt: Date.now() }
+            },
+            {
+                $set: {
+                    password: hashedPassword,
+                    passwordResetToken: undefined,
+                    passwordResetExpires: undefined
+                }
+            },
+            {
+                new: true,
+                runValidators: false
+            }
+        );
 
         if (!user) {
             return res.status(400).json({
@@ -141,17 +263,24 @@ exports.resetPassword = async (req, res) => {
             });
         }
 
-        user.password = req.body.password;
-        user.passwordResetToken = undefined;
-        user.passwordResetExpires = undefined;
-        await user.save();
+        // Create new JWT token
+        const jwtToken = jwt.sign(
+            { id: user._id },
+            process.env.JWT_SECRET,
+            { expiresIn: process.env.JWT_EXPIRES_IN }
+        );
 
-        await createSendToken(user, 200, res);
+        // Send response
+        res.status(200).json({
+            status: 'success',
+            message: 'Password has been reset successfully',
+            token: jwtToken
+        });
     } catch (err) {
         console.error('Reset password error:', err);
         res.status(500).json({
             status: 'error',
-            message: 'Error resetting password'
+            message: 'Error resetting password. Please try again.'
         });
     }
 };

@@ -1,8 +1,5 @@
 // Constants
-const API_URL = (() => {
-    const serverPort = localStorage.getItem('serverPort') || '5000';
-    return `http://localhost:${serverPort}/api`;
-})();
+const API_URL = 'http://localhost:5000/api';  // Use fixed port 5000
 
 // Initialize AOS
 AOS.init({
@@ -11,27 +8,14 @@ AOS.init({
     once: true
 });
 
-// Check server port before login
-async function checkServerPort() {
+// Check if server is running
+async function checkServer() {
     try {
-        // Try ports from 5000 to 5010
-        for (let port = 5000; port <= 5010; port++) {
-            try {
-                const response = await fetch(`http://localhost:${port}/api/health`);
-                if (response.ok) {
-                    const data = await response.json();
-                    localStorage.setItem('serverPort', port.toString());
-                    console.log(`Server found on port ${port}`);
-                    return port;
-                }
-            } catch (err) {
-                continue; // Try next port
-            }
-        }
-        throw new Error('Could not find server on any port');
+        const response = await fetch(`${API_URL}/health`);
+        return response.ok;
     } catch (error) {
-        console.error('Error checking server port:', error);
-        return 5000; // Default to 5000 if we can't find the server
+        console.error('Server check failed:', error);
+        return false;
     }
 }
 
@@ -140,17 +124,17 @@ loginForm.addEventListener('submit', async (e) => {
     loginButton.disabled = true;
     
     try {
-        // Check server port first
-        await checkServerPort();
-        
-        // Get the latest API URL with the correct port
-        const currentApiUrl = (() => {
-            const serverPort = localStorage.getItem('serverPort') || '5000';
-            return `http://localhost:${serverPort}/api`;
-        })();
+        // Check if server is running first
+        const isServerRunning = await checkServer();
+        if (!isServerRunning) {
+            throw new Error('Server is not running. Please ensure the backend server is started.');
+        }
 
-        const response = await fetch(`${currentApiUrl}/auth/login`, {
+        console.log('Attempting login with:', { email });
+        
+        const response = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
@@ -161,10 +145,27 @@ loginForm.addEventListener('submit', async (e) => {
             })
         });
 
-        const data = await response.json();
+        console.log('Response status:', response.status);
+        
+        // Get the response text first
+        const responseText = await response.text();
+        console.log('Raw response:', responseText);
+
+        // Try to parse as JSON
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('JSON parse error:', parseError);
+            throw new Error('Invalid response from server');
+        }
 
         if (!response.ok) {
             throw new Error(data.message || 'Login failed');
+        }
+
+        if (!data.token || !data.data || !data.data.user) {
+            throw new Error('Invalid response format from server');
         }
 
         console.log('Login successful, user data:', data.data.user);
@@ -172,7 +173,7 @@ loginForm.addEventListener('submit', async (e) => {
         // Set session with complete user data
         setSession(data.token, data.data.user);
         
-        // Also store specific fields in local storage for easier access
+        // Store user data in local storage
         const user = data.data.user;
         if (user) {
             console.log('Setting local storage user fields:', {
@@ -180,41 +181,23 @@ loginForm.addEventListener('submit', async (e) => {
                 name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
             });
             
-            if (user.email) localStorage.setItem('userEmail', user.email);
-            if (user.firstName && user.lastName) {
-                localStorage.setItem('userName', `${user.firstName} ${user.lastName}`);
-            } else if (user.email) {
-                localStorage.setItem('userName', user.email.split('@')[0]);
-            }
+            localStorage.setItem('userEmail', user.email);
+            localStorage.setItem('userName', user.firstName && user.lastName 
+                ? `${user.firstName} ${user.lastName}`
+                : user.email.split('@')[0]);
         }
         
-        // Show success message with animation
+        // Show success message and redirect
         showSuccess('Login successful! Redirecting to dashboard...');
-            loginButton.classList.add('d-none');
-            logoutButton.classList.remove('d-none');
-            
-        // Show progress bar
-        let progress = 0;
-        const progressBar = document.createElement('div');
-        progressBar.className = 'progress mt-3';
-        progressBar.innerHTML = '<div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>';
-        successMessage.appendChild(progressBar);
-        
-        const progressInterval = setInterval(() => {
-            progress += 5;
-            progressBar.querySelector('.progress-bar').style.width = `${progress}%`;
-            if (progress >= 100) {
-                clearInterval(progressInterval);
-                window.location.href = 'dashboard.html';
-            }
-        }, 50);
+        setTimeout(() => {
+            window.location.href = 'dashboard.html';
+        }, 1500);
 
     } catch (error) {
         console.error('Login error:', error);
-        showError(error.message || 'Invalid email or password');
-        emailInput.classList.add('is-invalid');
-        passwordInput.classList.add('is-invalid');
+        showError(error.message || 'Failed to login. Please try again.');
     } finally {
+        // Reset button state
         buttonText.textContent = 'Sign In';
         spinner.classList.add('d-none');
         loginButton.disabled = false;

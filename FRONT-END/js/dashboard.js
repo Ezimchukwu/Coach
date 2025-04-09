@@ -13,8 +13,9 @@ const userEmail = document.getElementById('userEmail');
 const logoutBtn = document.getElementById('logoutBtn');
 const profileForm = document.getElementById('profileForm');
 
-// Constants - force port 5000
+// Constants
 const API_BASE_URL = 'http://localhost:5000/api';
+const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNlMGUwZTAiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjM1IiByPSIyMCIgZmlsbD0iI2JkYmRiZCIvPjxwYXRoIGQ9Ik0yMCA4MEMyMCA2MCAzMCA1MCA1MCA1MFM4MCA2MCA4MCA4MFoiIGZpbGw9IiNiZGJkYmQiLz48L3N2Zz4=';
 
 // Store the port in local storage for consistency
 localStorage.setItem('serverPort', '5000');
@@ -41,8 +42,6 @@ function resolvePhotoUrl(photoPath, bustCache = true) {
     return bustCache ? `${fullUrl}?t=${Date.now()}` : fullUrl;
 }
 
-// Default avatar as a data URI (a simple user icon)
-const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNlMGUwZTAiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjM1IiByPSIyMCIgZmlsbD0iI2JkYmRiZCIvPjxwYXRoIGQ9Ik0yMCA4MEMyMCA2MCAzMCA1MCA1MCA1MFM4MCA2MCA4MCA4MFoiIGZpbGw9IiNiZGJkYmQiLz48L3N2Zz4=';
 // Default cover as a data URI (a simple gradient)
 const DEFAULT_COVER = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MDAiIGhlaWdodD0iMjAwIiB2aWV3Qm94PSIwIDAgODAwIDIwMCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJncmFkIiBncmFkaWVudFRyYW5zZm9ybT0icm90YXRlKDQ1KSI+PHN0b3Agb2Zmc2V0PSIwJSIgc3RvcC1jb2xvcj0iIzRhOTBlMiIvPjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzM1N2FiZCIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSI4MDAiIGhlaWdodD0iMjAwIiBmaWxsPSJ1cmwoI2dyYWQpIi8+PC9zdmc+';
 const dashboardContent = document.querySelector('.dashboard-content');
@@ -109,7 +108,7 @@ async function fetchWithRateLimit(url, options = {}) {
                 }
                 
                 return response;
-            } catch (error) {
+    } catch (error) {
                 console.error('Fetch error:', error);
                 throw error;
             }
@@ -169,10 +168,10 @@ async function loadUserData() {
         })();
 
         const response = await fetch(`${currentApiUrl}/dashboard/data`, {
-            headers: {
-                'Authorization': `Bearer ${session.token}`
-            }
-        });
+                headers: {
+                    'Authorization': `Bearer ${session.token}`
+                }
+            });
 
         if (!response.ok) {
             throw new Error('Failed to load user data');
@@ -204,7 +203,7 @@ async function initializeDashboard() {
             window.location.href = 'login.html';
             return;
         }
-        
+
         // Show loading indicator
         showLoadingIndicator(true);
         
@@ -402,11 +401,7 @@ async function handleProfilePhotoUpload(event) {
             return;
         }
 
-        // Force port to 5000
-        localStorage.setItem('serverPort', '5000');
-        
-        // Show loading indicator (shorter duration)
-        showLoadingIndicator(true);
+        // Show loading indicator
         const photoElements = document.querySelectorAll('.profile-photo, #navProfilePhoto, #profilePhoto');
         photoElements.forEach(el => {
             if (el) el.classList.add('loading');
@@ -420,7 +415,6 @@ async function handleProfilePhotoUpload(event) {
         const session = JSON.parse(localStorage.getItem('session'));
         if (!session || !session.token) {
             showToast('error', 'Please log in to upload a photo');
-            showLoadingIndicator(false);
             photoElements.forEach(el => {
                 if (el) el.classList.remove('loading');
             });
@@ -428,7 +422,6 @@ async function handleProfilePhotoUpload(event) {
         }
 
         // Make API request
-        console.log('Uploading photo to:', 'http://localhost:5000/api/dashboard/profile/photo');
         const response = await fetch('http://localhost:5000/api/dashboard/profile/photo', {
             method: 'POST',
             headers: {
@@ -442,52 +435,42 @@ async function handleProfilePhotoUpload(event) {
             throw new Error(errorData.message || 'Failed to upload photo');
         }
 
-        const responseData = await response.json();
-        console.log('Photo upload response:', responseData);
+        const data = await response.json();
+        console.log('Photo upload response:', data);
         
-        if (!responseData.success || !responseData.data || !responseData.data.photoUrl) {
+        if (!data.success || !data.data || !data.data.photoUrl) {
             throw new Error('Invalid response from server');
         }
 
         // Update session storage with the new photo URL
-        session.user.photo = responseData.data.photoUrl;
+        session.user.photo = data.data.photoUrl;
         localStorage.setItem('session', JSON.stringify(session));
         
-        // Extract the filename from the response
-        let filename = '';
-        if (responseData.data.fileInfo && responseData.data.fileInfo.filename) {
-            filename = responseData.data.fileInfo.filename;
-        } else {
-            // Extract from photoUrl if fileInfo is not available
-            filename = responseData.data.photoUrl.split('/').pop();
-        }
+        // Get the direct URL for the uploaded photo
+        const photoUrl = `http://localhost:5000${data.data.photoUrl}`;
         
-        console.log('Using filename for direct access:', filename);
-        
-        // Get the direct image URL through our dedicated endpoint
-        const directImageUrl = getDirectImageUrl(filename);
-        console.log('Direct image URL:', directImageUrl);
-        
-        // Apply to all photo elements
+        // Update all photo elements
         photoElements.forEach(element => {
             if (!element) return;
             
-            // Set the image source to our direct endpoint
+            // Clear the current image
+            element.src = '';
+            
+            // Set up load and error handlers
             element.onload = () => {
                 console.log('Photo loaded successfully');
                 element.classList.remove('loading');
-                
-                // Cache the successful URL
-                localStorage.setItem('lastSuccessfulPhotoUrl', directImageUrl);
+                localStorage.setItem('lastSuccessfulPhotoUrl', photoUrl);
             };
             
             element.onerror = () => {
-                console.error('Failed to load photo from direct URL:', directImageUrl);
+                console.error('Failed to load photo:', photoUrl);
                 element.src = DEFAULT_AVATAR;
                 element.classList.remove('loading');
             };
             
-            element.src = directImageUrl;
+            // Set the new image source with cache-busting
+            element.src = `${photoUrl}?t=${Date.now()}`;
         });
         
         // Show success message
@@ -508,11 +491,6 @@ async function handleProfilePhotoUpload(event) {
             }
         });
     } finally {
-        // Shorter loading time
-        setTimeout(() => {
-            showLoadingIndicator(false);
-        }, 300);
-        
         // Reset file input
         event.target.value = '';
     }
@@ -524,9 +502,9 @@ function tryLoadUrlSequence(element, urls, index) {
         console.error('All photo URLs failed, using default avatar');
         element.src = DEFAULT_AVATAR;
         element.classList.remove('loading');
-        return;
-    }
-    
+            return;
+        }
+
     const url = urls[index];
     console.log(`Trying URL ${index + 1}/${urls.length}:`, url);
     
@@ -953,8 +931,8 @@ function shareProfile() {
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
+        </div>
+    `;
             document.body.insertAdjacentHTML('beforeend', modalHTML);
             shareModal = document.getElementById('shareProfileModal');
         } else {
@@ -1091,8 +1069,8 @@ function showToast(type, message) {
     const toastContainer = document.querySelector('.toast-container');
     if (!toastContainer) {
         console.error('Toast container not found');
-        return;
-    }
+            return;
+        }
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
@@ -1536,28 +1514,27 @@ function updateProfilePhotos(user) {
     
     // Get photo URL - check multiple sources
     let photoPath = user.photo || user.profileImage || user.profilePhoto;
+    
+    // Use default avatar if no photo path found
     if (!photoPath) {
-        console.log('No photo path found in user object');
-        
-        // Use cached photo URL if available
-        const cachedPhotoUrl = localStorage.getItem('lastSuccessfulPhotoUrl');
-        if (cachedPhotoUrl) {
-            console.log('Using cached photo URL:', cachedPhotoUrl);
-            updateAllPhotoElements(cachedPhotoUrl);
-            return;
-        }
-        
-        console.log('No cached photo URL, using default avatar');
+        console.log('No photo path found in user object, using default avatar');
         updateAllPhotoElements(DEFAULT_AVATAR);
         return;
     }
     
-    // Get possible photo URLs to try
-    const photoUrls = Array.isArray(getImageUrl(photoPath)) 
-        ? getImageUrl(photoPath) 
-        : [getImageUrl(photoPath)];
+    // Handle different types of photo URLs
+    let photoUrl;
+    if (photoPath.startsWith('data:')) {
+        photoUrl = photoPath;
+    } else if (photoPath.startsWith('http')) {
+        photoUrl = photoPath;
+    } else if (photoPath.startsWith('/uploads/')) {
+        photoUrl = `http://localhost:5000${photoPath}`;
+    } else {
+        photoUrl = DEFAULT_AVATAR;
+    }
     
-    console.log('Generated photo URLs to try:', photoUrls);
+    console.log('Using photo URL:', photoUrl);
     
     // Find all photo elements
     const photoElements = [
@@ -1567,56 +1544,14 @@ function updateProfilePhotos(user) {
         ...document.querySelectorAll('.profile-photo')
     ].filter(el => el); // Filter out null/undefined elements
     
-    console.log(`Found ${photoElements.length} photo elements to update`);
-    
-    // Try loading images with multiple fallbacks for each element
+    // Update each element with the photo URL
     photoElements.forEach(element => {
-        tryLoadingWithFallbacks(element, photoUrls);
+        element.src = photoUrl;
+        element.onerror = function() {
+            console.error('Failed to load image:', photoUrl);
+            this.src = DEFAULT_AVATAR;
+        };
     });
-}
-
-// Try loading an image with multiple fallback URLs
-function tryLoadingWithFallbacks(element, urls) {
-    if (!element) return;
-    
-    // Mark element as loading
-    element.classList.add('loading');
-    
-    let currentIndex = 0;
-    
-    function tryNextUrl() {
-        if (currentIndex >= urls.length) {
-            console.error('All image URLs failed, using default avatar');
-            element.src = DEFAULT_AVATAR;
-            element.classList.remove('loading');
-            return;
-        }
-        
-        const currentUrl = urls[currentIndex];
-        console.log(`Trying photo URL (${currentIndex + 1}/${urls.length}):`, currentUrl);
-        
-        const img = new Image();
-        
-        img.onload = function() {
-            console.log('Successfully loaded image:', currentUrl);
-            element.src = currentUrl;
-            element.classList.remove('loading');
-            
-            // Cache the successful URL
-            localStorage.setItem('lastSuccessfulPhotoUrl', currentUrl);
-        };
-        
-        img.onerror = function() {
-            console.error(`Failed to load image URL (${currentIndex + 1}/${urls.length}):`, currentUrl);
-            currentIndex++;
-            tryNextUrl();
-        };
-        
-        img.src = currentUrl;
-    }
-    
-    // Start trying URLs
-    tryNextUrl();
 }
 
 // Update all photo elements with a specific URL
@@ -1626,13 +1561,10 @@ function updateAllPhotoElements(url) {
         document.getElementById('profilePhoto'),
         document.getElementById('navProfilePhoto'),
         ...document.querySelectorAll('.profile-photo')
-    ].filter(el => el); // Filter out null/undefined elements
+    ].filter(el => el);
     
     photoElements.forEach(element => {
         element.src = url;
-        element.classList.remove('loading');
-        
-        // Add error handler
         element.onerror = function() {
             console.error('Failed to load image:', url);
             this.src = DEFAULT_AVATAR;
@@ -1787,7 +1719,7 @@ function renderActivities(activities) {
             <div class="text-center text-muted p-4">
                 <i class="fas fa-history fa-2x mb-3"></i>
                 <p>No recent activities to display</p>
-            </div>
+                    </div>
         `;
         return;
     }
@@ -1796,13 +1728,13 @@ function renderActivities(activities) {
             <div class="activity-item">
             <div class="activity-icon ${getActivityIcon(activity.type)}">
                 <i class="fas ${getActivityIconClass(activity.type)}"></i>
-            </div>
+                    </div>
             <div class="activity-content">
                 <h6 class="activity-title">${activity.title}</h6>
                 <p class="activity-description text-muted mb-1">${activity.description}</p>
                 <small class="text-muted">${formatTimeAgo(new Date(activity.timestamp))}</small>
-            </div>
-            </div>
+                            </div>
+                            </div>
         `).join('');
 
     timeline.innerHTML = activityHTML;

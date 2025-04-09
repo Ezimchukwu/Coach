@@ -155,14 +155,14 @@ resetPasswordForm.addEventListener('submit', async (e) => {
     
     try {
         const response = await fetch('http://localhost:5000/api/auth/resetPassword', {
-            method: 'PATCH',
+            method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
             body: JSON.stringify({
                 token,
-                password,
-                passwordConfirm
+                password
             })
         });
 

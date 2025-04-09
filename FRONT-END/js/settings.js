@@ -329,42 +329,77 @@ class PasswordManager {
                 throw new Error('You are not logged in. Please log in and try again.');
             }
 
-            console.log('Token found:', token); // Debug log
-            console.log('Sending password update request...'); // Debug log
+            console.log('Debug - Request details:', {
+                url: `${API_URL}/settings/update-password`,
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
 
-            const response = await fetch(`${API_URL}/auth/updateMyPassword`, {
+            const response = await fetch(`${API_URL}/settings/update-password`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
+                credentials: 'include',
                 body: JSON.stringify({
-                    passwordCurrent: currentPassword,
-                    password: newPassword,
-                    passwordConfirm: confirmPassword
+                    currentPassword,
+                    newPassword,
+                    confirmPassword
                 })
             });
 
-            console.log('Response received:', response.status); // Debug log
+            console.log('Debug - Response status:', response.status);
+            console.log('Debug - Response headers:', Object.fromEntries(response.headers.entries()));
 
-            const data = await response.json();
-            console.log('Response data:', data); // Debug log
+            // Get the raw response text first
+            const responseText = await response.text();
+            console.log('Debug - Raw response:', responseText);
 
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to update password');
+            // Try to parse it as JSON
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('Debug - JSON parse error:', parseError);
+                throw new Error(`Server returned invalid JSON. Raw response: ${responseText.substring(0, 100)}...`);
             }
 
-            // Update session if new token is provided
-            if (data.token) {
-                const session = JSON.parse(localStorage.getItem('session'));
-                session.token = data.token;
-                localStorage.setItem('session', JSON.stringify(session));
+            if (!response.ok) {
+                throw new Error(data.message || `Server error: ${response.status}`);
             }
 
             showToast('success', 'Password updated successfully!');
             elements.forms.passwordUpdate.reset();
+
+            // Reset password visibility and icons
+            const passwordInputs = [
+                elements.inputs.currentPassword,
+                elements.inputs.newPassword,
+                elements.inputs.confirmPassword
+            ];
+
+            passwordInputs.forEach(input => {
+                if (input) {
+                    input.type = 'password';
+                    const toggleBtn = input.parentElement.querySelector('.password-toggle');
+                    if (toggleBtn) {
+                        const icon = toggleBtn.querySelector('i');
+                        if (icon) {
+                            icon.className = 'fas fa-eye';
+                        }
+                    }
+                }
+            });
+
         } catch (error) {
-            console.error('Password update error details:', error); // Debug log
+            console.error('Debug - Password update error:', {
+                message: error.message,
+                stack: error.stack
+            });
             showToast('error', error.message || 'Failed to update password');
         }
     }
@@ -452,33 +487,39 @@ function populateTimeZones() {
 // Event Listeners
 function setupEventListeners() {
     // Password Update Form
-    elements.forms.passwordUpdate.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const btn = e.target.querySelector('button[type="submit"]');
-        const spinner = btn.querySelector('.spinner-border');
-        
-        try {
-            btn.disabled = true;
-            spinner.classList.remove('d-none');
+    const passwordUpdateForm = document.getElementById('passwordUpdateForm');
+    if (passwordUpdateForm) {
+        passwordUpdateForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const spinner = btn.querySelector('.spinner-border');
             
-            await PasswordManager.updatePassword(
-                elements.inputs.currentPassword.value,
-                elements.inputs.newPassword.value,
-                elements.inputs.confirmPassword.value
-            );
-        } finally {
-            btn.disabled = false;
-            spinner.classList.add('d-none');
-        }
-    });
+            try {
+                btn.disabled = true;
+                spinner.classList.remove('d-none');
+                
+                await PasswordManager.updatePassword(
+                    elements.inputs.currentPassword.value,
+                    elements.inputs.newPassword.value,
+                    elements.inputs.confirmPassword.value
+                );
+            } finally {
+                btn.disabled = false;
+                spinner.classList.add('d-none');
+            }
+        });
+    }
 
     // Password Strength Check
-    elements.inputs.newPassword.addEventListener('input', (e) => {
-        PasswordStrengthChecker.updateStrengthIndicator(e.target.value);
-    });
+    if (elements.inputs.newPassword) {
+        elements.inputs.newPassword.addEventListener('input', (e) => {
+            PasswordStrengthChecker.updateStrengthIndicator(e.target.value);
+        });
+    }
 
     // Password Visibility Toggles
-    elements.buttons.passwordToggles.forEach(toggle => {
+    const passwordToggles = document.querySelectorAll('.password-toggle');
+    passwordToggles.forEach(toggle => {
         toggle.addEventListener('click', (e) => {
             const input = e.target.closest('.input-group').querySelector('input');
             PasswordManager.togglePasswordVisibility(input, toggle);
@@ -486,81 +527,40 @@ function setupEventListeners() {
     });
 
     // Save Settings
-    elements.buttons.saveSettings.addEventListener('click', () => {
-        SettingsManager.saveSettings();
-    });
+    if (elements.buttons.saveSettings) {
+        elements.buttons.saveSettings.addEventListener('click', () => {
+            SettingsManager.saveSettings();
+        });
+    }
 
     // Reset Settings
-    elements.buttons.resetSettings.addEventListener('click', () => {
-        if (confirm('Are you sure you want to reset all settings to default?')) {
-            elements.forms.passwordUpdate.reset();
-            // Additional reset logic here
-            showToast('success', 'Settings reset to default');
-        }
-    });
+    if (elements.buttons.resetSettings) {
+        elements.buttons.resetSettings.addEventListener('click', () => {
+            if (confirm('Are you sure you want to reset all settings to default?')) {
+                elements.forms.passwordUpdate.reset();
+                // Additional reset logic here
+                showToast('success', 'Settings reset to default');
+            }
+        });
+    }
 }
 
-// Add event listener for page load
+// Call setupEventListeners when the DOM is loaded
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Initialize navigation first
         if (typeof initializeNavigation === 'function') {
             console.log('Initializing navigation...');
             await initializeNavigation();
-        } else {
-            console.error('Navigation initialization function not found');
         }
         
         // Initialize settings
         console.log('Loading settings...');
         await SettingsManager.loadSettings();
         
-        // Add event listeners for settings form
-        if (elements.buttons.saveSettings) {
-            elements.buttons.saveSettings.addEventListener('click', async () => {
-                try {
-                    await SettingsManager.saveSettings();
-                } catch (error) {
-                    console.error('Error saving settings:', error);
-                    showToast('error', 'Failed to save settings: ' + error.message);
-                }
-            });
-        }
+        // Setup all event listeners
+        setupEventListeners();
         
-        if (elements.buttons.resetSettings) {
-            elements.buttons.resetSettings.addEventListener('click', () => {
-                if (confirm('Are you sure you want to reset all settings to default?')) {
-                    SettingsManager.applyDefaultSettings();
-                    showToast('success', 'Settings reset to default');
-                }
-            });
-        }
-        
-        // Initialize password toggles
-        elements.buttons.passwordToggles.forEach(toggle => {
-            toggle.addEventListener('click', function() {
-                const input = this.previousElementSibling;
-                const icon = this.querySelector('i');
-                if (input.type === 'password') {
-                    input.type = 'text';
-                    icon.classList.remove('fa-eye');
-                    icon.classList.add('fa-eye-slash');
-                } else {
-                    input.type = 'password';
-                    icon.classList.remove('fa-eye-slash');
-                    icon.classList.add('fa-eye');
-                }
-            });
-        });
-        
-        // Initialize password strength checker
-        const newPasswordInput = elements.inputs.newPassword;
-        if (newPasswordInput) {
-            newPasswordInput.addEventListener('input', function() {
-                PasswordStrengthChecker.updateStrengthIndicator(this.value);
-            });
-        }
-
         // Initialize time zones
         populateTimeZones();
 

@@ -7,7 +7,7 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- AOS CSS -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <!-- Custom CSS -->
@@ -165,85 +165,73 @@
     </section>
 
     <!-- Newsletter Section -->
-    <section id="newsletter" class="newsletter-section py-5">
+    <section id="newsletter" class="py-5 bg-light">
         <div class="container">
             <div class="row justify-content-center">
-                <div class="col-lg-8">
-                    <div class="newsletter-box text-center">
-                        <h2 class="section-title">Join Our Exclusive Community</h2>
-                        <p class="section-subtitle mb-4">Get instant access to resources, courses, and expert guidance delivered straight to your inbox.</p>
-                        
-                        <div class="newsletter-form">
-                            <form id="subscribeForm" onsubmit="handleFormSubmit(event)">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <input type="text" class="form-control" name="name" placeholder="Your Name" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <input type="email" class="form-control" name="email" placeholder="Your Email" required>
-                                    </div>
-                                    <div class="col-12">
-                                        <select class="form-select" name="interest" required>
-                                            <option value="">Select Your Interest</option>
-                                            <option value="personal">Personal Development</option>
-                                            <option value="career">Career Growth</option>
-                                            <option value="leadership">Leadership</option>
-                                            <option value="wellness">Wellness & Balance</option>
-                                            <option value="digital">Professional Digital Skills</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="form-check text-start">
-                                            <input class="form-check-input" type="checkbox" name="privacy" required>
-                                            <label class="form-check-label">
-                                                I agree to receive newsletters and accept the <a href="#">privacy policy</a>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <button type="submit" class="btn btn-primary btn-lg w-100" id="submitBtn">
-                                            <span class="button-text">Get Started Now</span>
-                                            <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                                        </button>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="alert alert-success d-none" id="successMessage">
-                                            Thank you for subscribing! Check your email for confirmation.
-                                        </div>
-                                        <div class="alert alert-danger d-none" id="errorMessage">
-                                            Oops! Something went wrong. Please try again.
-                                        </div>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div class="newsletter-features mt-4">
-                            <div class="row g-4">
-                                <div class="col-md-4">
-                                    <div class="feature-item">
-                                        <i class="fas fa-book-reader mb-2"></i>
-                                        <h5>Premium Content</h5>
-                                        <p>Access exclusive resources and materials</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="feature-item">
-                                        <i class="fas fa-users mb-2"></i>
-                                        <h5>Community Access</h5>
-                                        <p>Connect with like-minded individuals</p>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="feature-item">
-                                        <i class="fas fa-certificate mb-2"></i>
-                                        <h5>Expert Guidance</h5>
-                                        <p>Learn from industry professionals</p>
-                                    </div>
+                <div class="col-lg-8 text-center">
+                    <h2 class="section-title mb-3">Join Our Exclusive Community</h2>
+                    <p class="section-subtitle mb-4">Get expert insights, tips, and resources delivered straight to your inbox.</p>
+                    
+                    <!-- Alert Container -->
+                    <div id="alertContainer" class="mb-4"></div>
+                    
+                    <form id="newsletterForm" class="newsletter-form">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <input type="text" 
+                                        class="form-control" 
+                                        id="name" 
+                                        name="name" 
+                                        placeholder="Your Name" 
+                                        required>
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <input type="email" 
+                                        class="form-control" 
+                                        id="email" 
+                                        name="email" 
+                                        placeholder="Your Email" 
+                                        required>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <select class="form-select" 
+                                        id="interest" 
+                                        name="interest" 
+                                        required>
+                                        <option value="">Select Your Interest</option>
+                                        <option value="personal">Personal Development</option>
+                                        <option value="career">Career Growth</option>
+                                        <option value="leadership">Leadership Skills</option>
+                                        <option value="wellness">Health & Wellness</option>
+                                        <option value="digital">Digital Skills</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check text-start">
+                                    <input type="checkbox" 
+                                        class="form-check-input" 
+                                        id="privacyPolicy" 
+                                        name="privacyAccepted" 
+                                        required>
+                                    <label class="form-check-label" for="privacyPolicy">
+                                        I agree to receive newsletters and accept the privacy policy
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    <span class="button-text">Subscribe Now</span>
+                                    <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true"></span>
+                                </button>
+                            </div>
                         </div>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -294,75 +282,68 @@
         </div>
     </section>
 
-    <!-- Contact Section -->
+    <!-- Get in Touch Section -->
     <section id="contact" class="py-5 bg-light">
         <div class="container">
             <div class="row justify-content-center">
-                <div class="col-lg-8 text-center mb-5">
-                    <h2 class="section-title" data-aos="fade-up">Get in Touch</h2>
-                    <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">Ready to start your transformation journey? Reach out to us today.</p>
-                </div>
-            </div>
-            <div class="row justify-content-center">
-                <div class="col-lg-8">
-                    <div class="contact-box bg-white p-5 rounded-3 shadow-sm" data-aos="fade-up" data-aos-delay="200">
-                        <form id="contactForm">
-                            <div class="row g-4">
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <input type="text" class="form-control" placeholder="Your Name" required>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="form-group">
-                                        <input type="email" class="form-control" placeholder="Your Email" required>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="form-group">
-                                        <select class="form-select" required>
-                                            <option value="">Select Service</option>
-                                            <option value="1:1">1:1 Consulting</option>
-                                            <option value="group">Group Coaching</option>
-                                            <option value="corporate">Corporate Training</option>
-                                            <option value="other">Other</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="form-group">
-                                        <textarea class="form-control" rows="5" placeholder="Your Message" required></textarea>
-                                    </div>
-                                </div>
-                                <div class="col-12">
-                                    <button type="submit" class="btn btn-primary btn-lg w-100">Send Message</button>
+                <div class="col-lg-8 text-center">
+                    <h2 class="section-title mb-3">Get in Touch</h2>
+                    <p class="section-subtitle mb-5">Ready to start your transformation journey? Reach out to us today.</p>
+                    
+                    <!-- Alert Container -->
+                    <div id="contactAlertContainer" class="mb-4"></div>
+                    
+                    <form id="contactForm" class="contact-form">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <input type="text" 
+                                        class="form-control" 
+                                        name="name" 
+                                        placeholder="Your Name" 
+                                        required>
                                 </div>
                             </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            <div class="row mt-5 g-4">
-                <div class="col-md-4" data-aos="fade-up" data-aos-delay="300">
-                    <div class="contact-info text-center p-4 rounded-3 bg-white shadow-sm">
-                        <i class="fas fa-envelope fa-2x text-primary mb-3"></i>
-                        <h5>Email</h5>
-                        <p class="mb-0">contact@coachpro.com</p>
-                    </div>
-                </div>
-                <div class="col-md-4" data-aos="fade-up" data-aos-delay="400">
-                    <div class="contact-info text-center p-4 rounded-3 bg-white shadow-sm">
-                        <i class="fas fa-phone fa-2x text-primary mb-3"></i>
-                        <h5>Phone</h5>
-                        <p class="mb-0">+234 9031 433152</p>
-                    </div>
-                </div>
-                <div class="col-md-4" data-aos="fade-up" data-aos-delay="500">
-                    <div class="contact-info text-center p-4 rounded-3 bg-white shadow-sm">
-                        <i class="fas fa-map-marker-alt fa-2x text-primary mb-3"></i>
-                        <h5>Location</h5>
-                        <p class="mb-0">Imo State, Nigeria</p>
-                    </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <input type="email" 
+                                        class="form-control" 
+                                        name="email" 
+                                        placeholder="Your Email" 
+                                        required>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <select class="form-select" 
+                                        name="service" 
+                                        required>
+                                        <option value="">Select Service</option>
+                                        <option value="Personal Development">Personal Development</option>
+                                        <option value="Career Growth">Career Growth</option>
+                                        <option value="Leadership Skills">Leadership Skills</option>
+                                        <option value="Health & Wellness">Health & Wellness</option>
+                                        <option value="Digital Skills">Digital Skills</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <textarea class="form-control" 
+                                        name="message" 
+                                        rows="5" 
+                                        placeholder="Your Message" 
+                                        required></textarea>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary btn-lg">
+                                    Send Message
+                                </button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>

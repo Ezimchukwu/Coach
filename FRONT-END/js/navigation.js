@@ -10,6 +10,7 @@ const PAGES = {
     PROFILE: 'profile.html',
     SETTINGS: 'settings.html'
 };
+const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMTAwIDEwMCI+PHJlY3Qgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiIGZpbGw9IiNlMGUwZTAiLz48Y2lyY2xlIGN4PSI1MCIgY3k9IjM1IiByPSIyMCIgZmlsbD0iI2JkYmRiZCIvPjxwYXRoIGQ9Ik0yMCA4MEMyMCA2MCAzMCA1MCA1MCA1MFM4MCA2MCA4MCA4MFoiIGZpbGw9IiNiZGJkYmQiLz48L3N2Zz4=';
 
 // Session Management
 function checkSession() {
@@ -94,7 +95,7 @@ async function updateUserProfile() {
                 firstName: sessionUser.firstName || '',
                 lastName: sessionUser.lastName || '',
                 email: sessionUser.email || 'user@example.com',
-                photo: sessionUser.photo || '../images/default-avatar.svg'
+                photo: sessionUser.photo || DEFAULT_AVATAR
             });
         }
 
@@ -120,7 +121,7 @@ async function updateUserProfile() {
                 firstName: userData.firstName || '',
                 lastName: userData.lastName || '',
                 email: userData.email || 'user@example.com',
-                photo: userData.photo || '../images/default-avatar.svg'
+                photo: userData.photo || DEFAULT_AVATAR
             });
             
             // Update session data with fresh data
@@ -134,9 +135,9 @@ async function updateUserProfile() {
 }
 
 function updateProfileUI(user) {
-        // Update profile photo and name
+    // Update profile photo and name
     const profilePhotos = document.querySelectorAll('.profile-photo, #navProfilePhoto');
-        const userName = document.getElementById('userName');
+    const userName = document.getElementById('userName');
     const userEmail = document.getElementById('userEmail');
     
     console.log('Updating profile UI with user data:', user);
@@ -147,75 +148,45 @@ function updateProfileUI(user) {
     // Update all profile photo elements
     profilePhotos.forEach(photo => {
         if (photo) {
-            // Ensure there's a fallback image path
-            const defaultImagePath = '../images/default-avatar.svg';
-            
             // Get the photo URL from user data
-            let photoUrl = user.photo;
+            let photoUrl = user.photo || DEFAULT_AVATAR;
             
             // Only update the src if we have a new photo URL
             if (photoUrl) {
                 // Handle both relative and absolute URLs
-                if (photoUrl.startsWith('http')) {
+                if (photoUrl.startsWith('data:')) {
+                    photo.src = photoUrl;
+                } else if (photoUrl.startsWith('http')) {
                     photo.src = photoUrl;
                 } else if (photoUrl.startsWith('/uploads/')) {
                     photo.src = `${API_BASE_URL.replace('/api', '')}${photoUrl}`;
-                } else if (!photoUrl.startsWith('../')) {
-                    photo.src = `${API_BASE_URL.replace('/api', '')}/uploads/${photoUrl}`;
                 } else {
-                    photo.src = photoUrl;
+                    photo.src = DEFAULT_AVATAR;
                 }
                 
                 // Store the photo URL in localStorage for persistence
                 localStorage.setItem('userProfilePhoto', photoUrl);
             } else {
-                // Try to get the photo URL from localStorage if not in user data
-                const storedPhotoUrl = localStorage.getItem('userProfilePhoto');
-                if (storedPhotoUrl) {
-                    if (storedPhotoUrl.startsWith('http')) {
-                        photo.src = storedPhotoUrl;
-                    } else if (storedPhotoUrl.startsWith('/uploads/')) {
-                        photo.src = `${API_BASE_URL.replace('/api', '')}${storedPhotoUrl}`;
-                    } else if (!storedPhotoUrl.startsWith('../')) {
-                        photo.src = `${API_BASE_URL.replace('/api', '')}/uploads/${storedPhotoUrl}`;
-                    } else {
-                        photo.src = storedPhotoUrl;
-                    }
-                } else {
-                    photo.src = defaultImagePath;
-                }
+                photo.src = DEFAULT_AVATAR;
             }
             
             // Add error handler in case the image fails to load
             photo.onerror = function() {
                 console.error('Failed to load image:', this.src);
-                if (this.src !== defaultImagePath) {
-                    this.src = defaultImagePath;
-                    console.log('Profile image failed to load, using default');
-                }
+                this.src = DEFAULT_AVATAR;
             };
         }
     });
-        
-        if (userName) {
-        // Use firstName and lastName if available, otherwise fallback to email
-        if (user.firstName || user.lastName) {
-            userName.textContent = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-        } else {
-            const storedName = localStorage.getItem('userName');
-            userName.textContent = storedName || email.split('@')[0] || 'User';
-        }
+
+    // Update user name and email if elements exist
+    if (userName) {
+        userName.textContent = user.firstName && user.lastName 
+            ? `${user.firstName} ${user.lastName}`
+            : email.split('@')[0];
     }
     
-    // Update email element if it exists
     if (userEmail) {
-        console.log('Setting user email to:', email);
         userEmail.textContent = email;
-        
-        // Also update localStorage to ensure consistency
-        if (email && email !== 'user@example.com') {
-            localStorage.setItem('userEmail', email);
-        }
     }
 
     // Update notification badges if they exist in the response

@@ -69,68 +69,127 @@ document.addEventListener('DOMContentLoaded', function() {
 // Animate on scroll
 window.addEventListener('scroll', animateOnScroll);
 
-// Form submission handler with actual API integration
+// Newsletter form submission
 async function handleFormSubmit(event) {
     event.preventDefault();
     
     const form = event.target;
-    const submitBtn = form.querySelector('#submitBtn');
-    const buttonText = submitBtn.querySelector('.button-text');
-    const spinner = submitBtn.querySelector('.spinner-border');
-    const successMessage = document.querySelector('#successMessage');
-    const errorMessage = document.querySelector('#errorMessage');
-    
-    // Reset messages
-    successMessage.classList.add('d-none');
-    errorMessage.classList.add('d-none');
-    
-    // Show loading state
-    buttonText.textContent = 'Submitting...';
-    spinner.classList.remove('d-none');
-    submitBtn.disabled = true;
+    const submitButton = form.querySelector('button[type="submit"]');
+    const buttonText = submitButton.querySelector('.button-text').textContent;
+    const spinner = submitButton.querySelector('.spinner-border');
     
     try {
-        const formData = new FormData(form);
-        const data = Object.fromEntries(formData.entries());
+        // Show loading state
+        submitButton.disabled = true;
+        spinner.classList.remove('d-none');
         
-        // Send data to your backend API
-        const response = await fetch('/api/subscribe', {
+        // Get form data
+        const nameInput = form.querySelector('#name');
+        const emailInput = form.querySelector('#email');
+        const interestInput = form.querySelector('#interest');
+        const privacyInput = form.querySelector('#privacyPolicy');
+
+        // Log form field values for debugging
+        console.log('Form Data:', {
+            name: nameInput?.value,
+            email: emailInput?.value,
+            interest: interestInput?.value,
+            privacyAccepted: privacyInput?.checked
+        });
+
+        // Validate each field individually
+        if (!nameInput?.value?.trim()) {
+            throw new Error('Please enter your name');
+        }
+        if (!emailInput?.value?.trim()) {
+            throw new Error('Please enter your email');
+        }
+        if (!interestInput?.value?.trim()) {
+            throw new Error('Please select your interest');
+        }
+        if (!privacyInput?.checked) {
+            throw new Error('Please accept the privacy policy');
+        }
+
+        const formData = {
+            name: nameInput.value.trim(),
+            email: emailInput.value.trim(),
+            interest: interestInput.value.trim(),
+            privacyAccepted: privacyInput.checked
+        };
+
+        // Submit form data
+        const response = await fetch('http://localhost:5000/api/newsletter/subscribe', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify(formData)
         });
 
+        // Log the response for debugging
+        console.log('Response status:', response.status);
+        const responseData = await response.json();
+        console.log('Response data:', responseData);
+
         if (!response.ok) {
-            throw new Error('Subscription failed');
+            throw new Error(responseData.message || 'Subscription failed');
         }
 
         // Show success message
-        successMessage.classList.remove('d-none');
+        showAlert('success', responseData.message || 'Thank you for subscribing!');
+        
+        // Reset form
         form.reset();
         
-        // Store subscription status in localStorage
-        localStorage.setItem('subscribed', 'true');
-        localStorage.setItem('userEmail', data.email);
-        
-        // Track conversion
-        if (typeof gtag !== 'undefined') {
-            gtag('event', 'newsletter_signup', {
-                'event_category': 'engagement',
-                'event_label': data.interest
-            });
-        }
     } catch (error) {
         console.error('Form submission error:', error);
-        errorMessage.classList.remove('d-none');
-        errorMessage.textContent = 'Sorry, something went wrong. Please try again later.';
+        showAlert('danger', error.message || 'Something went wrong. Please try again.');
+        
     } finally {
-        buttonText.textContent = 'Get Started Now';
+        // Reset button state
+        submitButton.disabled = false;
         spinner.classList.add('d-none');
-        submitBtn.disabled = false;
+        submitButton.querySelector('.button-text').textContent = buttonText;
     }
 }
+
+// Show alert message
+function showAlert(type, message) {
+    const alertContainer = document.getElementById('alertContainer');
+    if (!alertContainer) {
+        console.error('Alert container not found');
+        return;
+    }
+    
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    alertContainer.innerHTML = '';
+    alertContainer.appendChild(alert);
+    
+    // Auto dismiss after 5 seconds
+    setTimeout(() => {
+        if (alert.parentNode === alertContainer) {
+            alert.classList.remove('show');
+            setTimeout(() => alertContainer.removeChild(alert), 150);
+        }
+    }, 5000);
+}
+
+// Add form submit event listener
+document.addEventListener('DOMContentLoaded', function() {
+    const newsletterForm = document.getElementById('newsletterForm');
+    if (newsletterForm) {
+        newsletterForm.addEventListener('submit', handleFormSubmit);
+    } else {
+        console.error('Newsletter form not found');
+    }
+});
 
 // Interactive features
 document.addEventListener('DOMContentLoaded', function() {
@@ -329,4 +388,142 @@ if (typeof bootstrap !== 'undefined') {
     popoverTriggerList.map(function (popoverTriggerEl) {
         return new bootstrap.Popover(popoverTriggerEl);
     });
-} 
+}
+
+// Contact form submission
+async function handleContactFormSubmit(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+    const buttonText = submitButton.textContent;
+    
+    try {
+        // Show loading state
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+        
+        // Get form data
+        const formData = {
+            name: form.querySelector('input[name="name"]').value.trim(),
+            email: form.querySelector('input[name="email"]').value.trim(),
+            service: form.querySelector('select[name="service"]').value.trim(),
+            message: form.querySelector('textarea[name="message"]').value.trim()
+        };
+
+        // Validate form data
+        if (!formData.name || !formData.email || !formData.service || !formData.message) {
+            throw new Error('Please fill in all required fields');
+        }
+
+        // Submit form data
+        const response = await fetch('http://localhost:5000/api/contact/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Origin': window.location.origin
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to send message');
+        }
+
+        // Show success message with custom styling
+        showContactAlert('success', `
+            <div class="text-center">
+                <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                <h4 class="alert-heading mb-2">Message Sent Successfully!</h4>
+                <p class="mb-0">Thank you for reaching out, ${formData.name}! We've received your message and will get back to you soon.</p>
+            </div>
+        `);
+        
+        // Reset form
+        form.reset();
+        
+        // Scroll to the alert
+        const alertContainer = document.getElementById('contactAlertContainer');
+        if (alertContainer) {
+            alertContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+    } catch (error) {
+        console.error('Contact form submission error:', error);
+        showContactAlert('danger', `
+            <div class="text-center">
+                <i class="fas fa-exclamation-circle fa-3x mb-3 text-danger"></i>
+                <h4 class="alert-heading mb-2">Oops!</h4>
+                <p class="mb-0">${error.message || 'Something went wrong. Please try again.'}</p>
+            </div>
+        `);
+        
+    } finally {
+        // Reset button state
+        submitButton.disabled = false;
+        submitButton.textContent = buttonText;
+    }
+}
+
+// Show contact form alert message
+function showContactAlert(type, message) {
+    const alertContainer = document.getElementById('contactAlertContainer');
+    if (!alertContainer) return;
+    
+    // Remove any existing alerts
+    const existingAlert = alertContainer.querySelector('.alert');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+    
+    // Create new alert
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show`;
+    alert.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Add some animation classes
+    alert.style.animation = 'fadeInDown 0.5s ease-out';
+    
+    // Add the alert to the container
+    alertContainer.appendChild(alert);
+    
+    // Auto dismiss success messages after 8 seconds
+    if (type === 'success') {
+        setTimeout(() => {
+            if (alert.parentNode === alertContainer) {
+                alert.classList.remove('show');
+                setTimeout(() => alert.remove(), 150);
+            }
+        }, 8000);
+    }
+}
+
+// Add contact form submit event listener
+document.addEventListener('DOMContentLoaded', function() {
+    const contactForm = document.getElementById('contactForm');
+    if (contactForm) {
+        contactForm.addEventListener('submit', handleContactFormSubmit);
+    }
+    
+    // Add custom animation keyframes
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}); 

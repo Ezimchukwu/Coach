@@ -16,18 +16,35 @@ const fs = require('fs');
 // Initialize express app
 const app = express();
 
+// Create required directories
+const uploadDirs = [
+    path.join(__dirname, 'public'),
+    path.join(__dirname, 'public', 'uploads'),
+    path.join(__dirname, 'public', 'uploads', 'profiles')
+];
+
+uploadDirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        try {
+            fs.mkdirSync(dir, { recursive: true });
+            console.log(`Created directory: ${dir}`);
+        } catch (err) {
+            console.error(`Error creating directory ${dir}:`, err);
+        }
+    }
+});
+
 // Security Middleware
-// Configure Helmet with adjusted CSP for image loading
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: {
         directives: {
-            defaultSrc: ["'self'"],
-            imgSrc: ["'self'", "data:", "blob:", "http://localhost:*"],
+            defaultSrc: ["'self'", "http://localhost:*", "http://127.0.0.1:*"],
+            imgSrc: ["'self'", "data:", "blob:", "http://localhost:*", "http://127.0.0.1:*"],
             styleSrc: ["'self'", "'unsafe-inline'", "https:"],
             scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:"],
-            connectSrc: ["'self'", "http://localhost:*"],
+            connectSrc: ["'self'", "http://localhost:*", "http://127.0.0.1:*"],
             fontSrc: ["'self'", "https:", "data:"],
             objectSrc: ["'none'"],
             mediaSrc: ["'self'"],
@@ -37,19 +54,13 @@ app.use(helmet({
 }));
 
 // CORS configuration
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    
-    // Handle preflight
-    if (req.method === 'OPTIONS') {
-        res.status(200).end();
-        return;
-    }
-    next();
-});
+app.use(cors({
+    origin: ['http://127.0.0.1:5500', 'http://localhost:5500'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
+    exposedHeaders: ['set-cookie']
+}));
 
 // Development logging
 if (process.env.NODE_ENV === 'development') {
@@ -80,14 +91,8 @@ app.use(compression());
 app.use('/uploads', (req, res, next) => {
     console.log(`Static file request for: ${req.url}`);
     
-    // Set CORS headers
+    // Cache busting headers only
     res.set({
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
-        'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept, Authorization',
-        'Cross-Origin-Resource-Policy': 'cross-origin',
-        'Cross-Origin-Embedder-Policy': 'unsafe-none',
-        // Aggressive cache busting headers
         'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
         'Pragma': 'no-cache',
         'Expires': '0'
@@ -151,12 +156,16 @@ const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboard');
 const settingsRoutes = require('./routes/settingsRoutes');
 const profileRoutes = require('./routes/profileRoutes');
+const newsletterRoutes = require('./routes/newsletterRoutes');
+const contactRoutes = require('./routes/contactRoutes');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Make sure to serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));

@@ -37,6 +37,22 @@ function showError(message) {
     errorMessage.classList.remove('d-none');
 }
 
+// Show success message
+function showSuccess(message) {
+    successMessage.innerHTML = `
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle me-2"></i>
+            ${message}
+            <div class="mt-3">
+                <a href="login.html" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login Now
+                </a>
+            </div>
+        </div>
+    `;
+    successMessage.classList.remove('d-none');
+}
+
 // Reset password form submission
 resetForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -46,7 +62,7 @@ resetForm.addEventListener('submit', async (e) => {
     errorMessage.classList.add('d-none');
     
     // Get form values
-    const token = resetToken.value.trim();
+    const token = resetToken.value.trim().toUpperCase();
     const password = newPassword.value;
     const passwordConfirm = confirmPassword.value;
     
@@ -75,37 +91,42 @@ resetForm.addEventListener('submit', async (e) => {
     resetButton.disabled = true;
     
     try {
+        // First check if server is running
+        try {
+            const healthCheck = await fetch('http://localhost:5000/api/health');
+            if (!healthCheck.ok) {
+                throw new Error('Server is not responding. Please try again later.');
+            }
+        } catch (error) {
+            throw new Error('Cannot connect to server. Please check your internet connection.');
+        }
+
         // Make API call to reset password
-        const response = await fetch(`http://localhost:5000/api/auth/resetPassword/${token}`, {
-            method: 'PATCH',
+        const response = await fetch('http://localhost:5000/api/auth/resetPassword', {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
+                token,
                 password,
                 passwordConfirm
-            })
+            }),
+            credentials: 'include'
         });
 
+        // Log the response for debugging
+        console.log('Reset password response:', response.status, response.statusText);
+        
         const data = await response.json();
+        console.log('Reset password data:', data);
 
         if (!response.ok) {
             throw new Error(data.message || 'Failed to reset password');
         }
 
-        // Show success message
-        successMessage.innerHTML = `
-            <div class="alert alert-success">
-                <i class="fas fa-check-circle me-2"></i>
-                Password reset successful! You can now login with your new password.
-                <div class="mt-3">
-                    <a href="login.html" class="btn btn-primary">
-                        <i class="fas fa-sign-in-alt me-2"></i>Login Now
-                    </a>
-                </div>
-            </div>
-        `;
-        successMessage.classList.remove('d-none');
+        // Show success message and hide form
+        showSuccess('Password reset successful! You can now login with your new password.');
         resetForm.reset();
         resetForm.classList.add('d-none');
 
