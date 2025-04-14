@@ -66,6 +66,17 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
         select: false
+    },
+    // Add social authentication fields
+    provider: {
+        type: String,
+        enum: ['local', 'google', 'facebook', 'linkedin'],
+        default: 'local'
+    },
+    providerId: String,
+    emailVerified: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true,
@@ -75,7 +86,8 @@ const userSchema = new mongoose.Schema({
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) return next();
+    // Only hash the password if it's a local account or if the password has been modified
+    if (this.provider !== 'local' || !this.isModified('password')) return next();
     
     this.password = await bcrypt.hash(this.password, 12);
     next();

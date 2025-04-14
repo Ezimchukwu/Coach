@@ -134,10 +134,20 @@ function checkAuth() {
 
 // Wait for DOM to be fully loaded before initializing
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize logout buttons
+    const logoutButton = document.getElementById('logoutButton');
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    if (logoutButton) {
+        logoutButton.addEventListener('click', handleLogout);
+    }
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+    }
+    
     // Directly set the bio field while waiting for the data to load
     const bioElement = document.getElementById('profileBio');
     if (bioElement) {
-        // This ensures we see something if loading takes time
         bioElement.textContent = 'Loading bio...';
     }
     
@@ -1805,3 +1815,49 @@ async function checkServerPort() {
         return '5000'; // Default fallback
     }
 }
+
+// Function to handle logout
+async function handleLogout() {
+    try {
+        // Show loading state on logout button
+        const logoutBtns = document.querySelectorAll('.top-logout-btn');
+        logoutBtns.forEach(btn => {
+            btn.disabled = true;
+            const icon = btn.querySelector('i');
+            if (icon) icon.className = 'fas fa-spinner fa-spin';
+        });
+
+        // Clear all auth-related data from localStorage
+        localStorage.removeItem('session');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        
+        try {
+            // Call logout endpoint
+            const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                }
+            });
+
+            if (!response.ok) {
+                console.error('Logout failed:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Logout request failed:', error);
+            // Continue with client-side logout even if server request fails
+        }
+
+        // Redirect to login page
+        window.location.href = '/Coach/FRONT-END/login.html';
+    } catch (error) {
+        console.error('Logout error:', error);
+        // Ensure redirect happens even if there's an error
+        window.location.href = '/Coach/FRONT-END/login.html';
+    }
+}
+
+// Make handleLogout available globally for onclick handlers
+window.handleLogout = handleLogout;

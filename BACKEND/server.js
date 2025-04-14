@@ -12,9 +12,13 @@ const cookieParser = require('cookie-parser');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
+const passport = require('passport');
 
 // Initialize express app
 const app = express();
+
+// Initialize Passport
+app.use(passport.initialize());
 
 // Create required directories
 const uploadDirs = [
@@ -55,7 +59,7 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-    origin: ['http://127.0.0.1:5500', 'http://localhost:5500'],
+    origin: ['http://127.0.0.1:5500', 'http://localhost:5500', 'http://localhost:5000', 'http://127.0.0.1:5000'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
@@ -158,8 +162,10 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const profileRoutes = require('./routes/profileRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
 const contactRoutes = require('./routes/contactRoutes');
+const socialAuthRoutes = require('./routes/socialAuth');
 
 // Mount routes
+app.use('/api/auth', socialAuthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/settings', settingsRoutes);

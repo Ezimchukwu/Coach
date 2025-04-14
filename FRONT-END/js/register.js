@@ -44,20 +44,9 @@ document.addEventListener('DOMContentLoaded', function() {
         const interest = document.getElementById('interest').value;
         const terms = document.getElementById('terms').checked;
 
-        // Enhanced validation with specific error messages
-        const validationErrors = [];
-        
-        if (!firstName || !lastName) validationErrors.push('Please enter your full name');
-        if (!isValidEmail(email)) validationErrors.push('Please enter a valid email address');
-        if (!isValidPhone(phone)) validationErrors.push('Please enter a valid phone number');
-        if (!isValidPassword(password)) validationErrors.push('Password must meet all requirements');
-        if (password !== confirmPassword) validationErrors.push('Passwords do not match');
-        if (!interest) validationErrors.push('Please select your area of interest');
-        if (!terms) validationErrors.push('Please accept the terms and conditions');
-        
-        if (validationErrors.length > 0) {
-            errorMessage.innerHTML = validationErrors.map(error => `<div>${error}</div>`).join('');
-            errorMessage.classList.remove('d-none');
+        // Basic validation
+        if (!firstName || !lastName || !email || !phone || !password || !confirmPassword || !interest || !terms) {
+            showError('Please fill in all required fields');
             return;
         }
 
@@ -66,56 +55,36 @@ document.addEventListener('DOMContentLoaded', function() {
         spinner.classList.remove('d-none');
         registerButton.disabled = true;
 
-        try {
-            // Check server connection
-            const isConnected = await checkServerConnection();
-            if (!isConnected) {
-                throw new Error('Server is offline. Please start the backend server and try again.');
-            }
+        // Create the request payload
+        const requestData = {
+            name: `${firstName} ${lastName}`, // Combine first and last name
+            email: email,
+            password: password,
+            phoneNumber: phone,
+            interest: interest
+        };
 
+        // Debug: Log the data being sent
+        console.log('Sending registration data:', requestData);
+
+        try {
             const response = await fetch('http://localhost:5000/api/auth/signup', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                credentials: 'include',
-                body: JSON.stringify({
-                    firstName,
-                    lastName,
-                    email,
-                    phoneNumber: phone,
-                    password,
-                    passwordConfirm: confirmPassword,
-                    interest,
-                    address: {
-                        street: '',
-                        city: '',
-                        state: '',
-                        zipCode: '',
-                        country: ''
-                    }
-                })
+                body: JSON.stringify(requestData)
             });
 
+            // Debug: Log the raw response
+            console.log('Server response status:', response.status);
+            
             const data = await response.json();
+            console.log('Server response data:', data);
 
             if (!response.ok) {
-                if (data.error && data.error.code === 11000) {
-                    // Clear the form and show a more user-friendly message
-                    registerForm.reset();
-                    throw new Error(`
-                        <div class="alert alert-warning text-center">
-                            <i class="fas fa-exclamation-triangle mb-2"></i>
-                            <p>This email address is already registered.</p>
-                            <div class="mt-2">
-                                <a href="login.html" class="btn btn-primary btn-sm me-2">Login</a>
-                                <a href="forgot-password.html" class="btn btn-secondary btn-sm">Reset Password</a>
-                            </div>
-                        </div>
-                    `);
-                }
-                throw new Error(data.message || 'Registration failed. Please try again.');
+                throw new Error(data.message || 'Registration failed');
             }
 
             // Show success message
@@ -139,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Registration error:', error);
             
-            // Handle specific error cases
+            // Show detailed error message
             let errorMsg = error.message;
             if (error.message === 'Failed to fetch') {
                 errorMsg = `
@@ -147,7 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <i class="fas fa-exclamation-circle mb-2"></i>
                         <p>Unable to connect to the server.</p>
                         <ul class="list-unstyled small">
-                            <li>1. Check if the backend server is running</li>
+                            <li>1. Check if the backend server is running on port 5000</li>
                             <li>2. Verify your internet connection</li>
                             <li>3. Try refreshing the page</li>
                         </ul>
@@ -158,7 +127,6 @@ document.addEventListener('DOMContentLoaded', function() {
             errorMessage.innerHTML = errorMsg;
             errorMessage.classList.remove('d-none');
             errorMessage.scrollIntoView({ behavior: 'smooth' });
-            
         } finally {
             // Reset button state
             buttonText.textContent = 'Create Account';
@@ -166,6 +134,23 @@ document.addEventListener('DOMContentLoaded', function() {
             registerButton.disabled = false;
         }
     });
+
+    // Show error message
+    function showError(message) {
+        errorMessage.innerHTML = message;
+        errorMessage.classList.remove('d-none');
+        errorMessage.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Validate email format
+    function isValidEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    // Validate phone format
+    function isValidPhone(phone) {
+        return /^\+?[\d\s-]{10,}$/.test(phone);
+    }
 
     // Real-time password validation
     passwordInput.addEventListener('input', validatePasswordStrength);
@@ -212,25 +197,6 @@ function validateForm(firstName, lastName, email, phone, password, confirmPasswo
     }
 
     return true;
-}
-
-// Show error message
-function showError(message) {
-    const errorMessage = document.getElementById('errorMessage');
-    errorMessage.textContent = message;
-    errorMessage.classList.remove('d-none');
-}
-
-// Validate email format
-function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-}
-
-// Validate phone format
-function isValidPhone(phone) {
-    const phoneRegex = /^\+?[\d\s-]{10,}$/;
-    return phoneRegex.test(phone);
 }
 
 // Validate password strength
@@ -295,11 +261,161 @@ function validatePasswordMatch() {
 }
 
 // Handle social login buttons
+function handleGoogleSignIn() {
+    const width = 500;
+    const height = 600;
+    const left = (window.innerWidth - width) / 2;
+    const top = (window.innerHeight - height) / 2;
+
+    const popup = window.open(
+        'http://localhost:5000/api/auth/google',
+        'Google Sign In',
+        `width=${width},height=${height},left=${left},top=${top}`
+    );
+
+    if (!popup) {
+        showError('Please enable popups for this website');
+        return;
+    }
+
+    const checkPopup = setInterval(() => {
+        if (popup.closed) {
+            clearInterval(checkPopup);
+            return;
+        }
+
+        try {
+            if (popup.location.href.includes('token=')) {
+                const token = new URL(popup.location.href).searchParams.get('token');
+                handleSocialLoginSuccess(token);
+                clearInterval(checkPopup);
+                popup.close();
+            }
+        } catch (error) {
+            // Cross-origin errors expected while on the OAuth provider domain
+            if (!error.message.includes('cross-origin')) {
+                console.error('Error checking popup:', error);
+            }
+        }
+    }, 500);
+}
+
+function handleFacebookSignIn() {
+    const width = 500;
+    const height = 600;
+    const left = (window.innerWidth - width) / 2;
+    const top = (window.innerHeight - height) / 2;
+
+    const popup = window.open(
+        'http://localhost:5000/api/auth/facebook',
+        'Facebook Sign In',
+        `width=${width},height=${height},left=${left},top=${top}`
+    );
+
+    if (!popup) {
+        showError('Please enable popups for this website');
+        return;
+    }
+
+    const checkPopup = setInterval(() => {
+        if (popup.closed) {
+            clearInterval(checkPopup);
+            return;
+        }
+
+        try {
+            if (popup.location.href.includes('token=')) {
+                const token = new URL(popup.location.href).searchParams.get('token');
+                handleSocialLoginSuccess(token);
+                clearInterval(checkPopup);
+                popup.close();
+            }
+        } catch (error) {
+            // Cross-origin errors expected while on the OAuth provider domain
+            if (!error.message.includes('cross-origin')) {
+                console.error('Error checking popup:', error);
+            }
+        }
+    }, 500);
+}
+
+function handleLinkedInSignIn() {
+    const width = 500;
+    const height = 600;
+    const left = (window.innerWidth - width) / 2;
+    const top = (window.innerHeight - height) / 2;
+
+    const popup = window.open(
+        'http://localhost:5000/api/auth/linkedin',
+        'LinkedIn Sign In',
+        `width=${width},height=${height},left=${left},top=${top}`
+    );
+
+    if (!popup) {
+        showError('Please enable popups for this website');
+        return;
+    }
+
+    const checkPopup = setInterval(() => {
+        if (popup.closed) {
+            clearInterval(checkPopup);
+            return;
+        }
+
+        try {
+            if (popup.location.href.includes('token=')) {
+                const token = new URL(popup.location.href).searchParams.get('token');
+                handleSocialLoginSuccess(token);
+                clearInterval(checkPopup);
+                popup.close();
+            }
+        } catch (error) {
+            // Cross-origin errors expected while on the OAuth provider domain
+            if (!error.message.includes('cross-origin')) {
+                console.error('Error checking popup:', error);
+            }
+        }
+    }, 500);
+}
+
+function handleSocialLoginSuccess(token) {
+    if (token) {
+        // Store the token
+        localStorage.setItem('token', token);
+        
+        // Show success message
+        successMessage.innerHTML = `
+            <div class="alert alert-success text-center">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <p>Successfully signed in!</p>
+                <p class="small">Redirecting to dashboard...</p>
+            </div>
+        `;
+        successMessage.classList.remove('d-none');
+
+        // Redirect to dashboard
+        setTimeout(() => {
+            window.location.href = '/dashboard.html';
+        }, 1500);
+    }
+}
+
+// Update social button click handlers
 document.querySelectorAll('.social-btn').forEach(button => {
     button.addEventListener('click', function(e) {
         e.preventDefault();
-        // Implement social login functionality here
-        alert('Social login functionality will be implemented soon!');
+        const provider = this.getAttribute('data-provider');
+        switch (provider) {
+            case 'google':
+                handleGoogleSignIn();
+                break;
+            case 'facebook':
+                handleFacebookSignIn();
+                break;
+            case 'linkedin':
+                handleLinkedInSignIn();
+                break;
+        }
     });
 });
 

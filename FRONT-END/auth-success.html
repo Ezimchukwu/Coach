@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Success</title>
+    <script>
+        window.onload = function() {
+            // Get token from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            
+            if (token) {
+                // Store token
+                window.opener.postMessage({ type: 'AUTH_SUCCESS', token }, '*');
+                window.close();
+            } else {
+                document.body.innerHTML = '<h3>Authentication failed. Please try again.</h3>';
+            }
+        };
+    </script>
+</head>
+<body>
+    <h3>Authentication successful! You can close this window.</h3>
+</body>
+</html> 
