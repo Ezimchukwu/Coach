@@ -25,11 +25,7 @@ const settingsSchema = new mongoose.Schema({
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: [true, 'Please provide your name'],
-        trim: true
-    },
+    name: String,  // Making it completely optional
     email: {
         type: String,
         required: [true, 'Please provide your email'],
@@ -56,6 +52,21 @@ const userSchema = new mongoose.Schema({
         type: settingsSchema,
         default: () => ({})
     },
+    goals: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Goal',
+        default: []
+    }],
+    sessions: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Session',
+        default: []
+    }],
+    resources: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Resource',
+        default: []
+    }],
     bio: String,
     location: String,
     phoneNumber: String,

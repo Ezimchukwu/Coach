@@ -134,7 +134,6 @@ loginForm.addEventListener('submit', async (e) => {
         
         const response = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
-            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
@@ -164,27 +163,35 @@ loginForm.addEventListener('submit', async (e) => {
             throw new Error(data.message || 'Login failed');
         }
 
-        if (!data.token || !data.data || !data.data.user) {
+        // Check if we have the expected data structure
+        if (!data.success) {
+            throw new Error(data.message || 'Login failed');
+        }
+
+        const userData = data.data?.user;
+        const token = data.data?.token;
+
+        if (!token || !userData) {
+            console.error('Invalid response structure:', data);
             throw new Error('Invalid response format from server');
         }
 
-        console.log('Login successful, user data:', data.data.user);
+        console.log('Login successful, user data:', userData);
             
         // Set session with complete user data
-        setSession(data.token, data.data.user);
+        setSession(token, userData);
         
         // Store user data in local storage
-        const user = data.data.user;
-        if (user) {
+        if (userData) {
             console.log('Setting local storage user fields:', {
-                email: user.email,
-                name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email,
+                email: userData.email,
+                name: `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email,
             });
             
-            localStorage.setItem('userEmail', user.email);
-            localStorage.setItem('userName', user.firstName && user.lastName 
-                ? `${user.firstName} ${user.lastName}`
-                : user.email.split('@')[0]);
+            localStorage.setItem('userEmail', userData.email);
+            localStorage.setItem('userName', userData.firstName && userData.lastName 
+                ? `${userData.firstName} ${userData.lastName}`
+                : userData.email.split('@')[0]);
         }
         
         // Show success message and redirect

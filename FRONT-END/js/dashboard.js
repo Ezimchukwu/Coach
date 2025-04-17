@@ -1203,6 +1203,39 @@ function setupPhotoUpload() {
     }
 }
 
+// Function to get the correct photo URL
+function getPhotoUrl(photoPath) {
+    if (!photoPath) return DEFAULT_AVATAR;
+    if (photoPath.startsWith('http')) return photoPath;
+    return `${API_BASE_URL.replace('/api', '')}${photoPath}`;
+}
+
+// Update profile photo if exists
+function updateProfilePhoto(photoPath) {
+    if (!profilePhoto) return;
+    
+    console.log('Updating profile photo with path:', photoPath);
+    const photoUrl = getPhotoUrl(photoPath);
+    console.log('Resolved photo URL:', photoUrl);
+    
+    // Set loading state
+    profilePhoto.classList.add('loading');
+    
+    // Create a new image to test loading
+    const img = new Image();
+    img.onload = () => {
+        console.log('Profile photo loaded successfully');
+        profilePhoto.src = photoUrl;
+        profilePhoto.classList.remove('loading');
+    };
+    img.onerror = () => {
+        console.error('Failed to load profile photo:', photoUrl);
+        profilePhoto.src = DEFAULT_AVATAR;
+        profilePhoto.classList.remove('loading');
+    };
+    img.src = photoUrl;
+}
+
 // Handle photo upload
 async function handlePhotoUpload(event) {
     try {
@@ -1225,9 +1258,15 @@ async function handlePhotoUpload(event) {
             throw new Error('Image size should be less than 5MB');
         }
 
+        // Show loading state
+        if (profilePhoto) {
+            profilePhoto.classList.add('loading');
+        }
+
         const formData = new FormData();
         formData.append('photo', file);
 
+        console.log('Uploading photo...');
         const response = await fetch(`${API_BASE_URL}/dashboard/profile/photo`, {
             method: 'POST',
             headers: {
@@ -1242,30 +1281,32 @@ async function handlePhotoUpload(event) {
         }
 
         const { data } = await response.json();
+        console.log('Upload response:', data);
         
         // Update profile photo in UI
-        if (profilePhoto) {
-            const photoUrl = data.photoUrl.startsWith('http')
-                ? data.photoUrl
-                : `${API_BASE_URL.replace('/api', '')}${data.photoUrl}`;
+        if (data.photoUrl) {
+            updateProfilePhoto(data.photoUrl);
             
-            profilePhoto.src = photoUrl;
+            // Update session data
+            session.user.photo = data.photoUrl;
+            localStorage.setItem('session', JSON.stringify(session));
+
+            // Trigger profile update in navigation
+            if (window.updateUserProfile) {
+                window.updateUserProfile();
+            }
+
+            showToast('success', 'Profile photo updated successfully');
+        } else {
+            throw new Error('No photo URL received from server');
         }
-
-        // Update session data
-        session.user.photo = data.photoUrl;
-        localStorage.setItem('session', JSON.stringify(session));
-
-        // Trigger profile update in navigation
-        if (window.updateUserProfile) {
-            window.updateUserProfile();
-        }
-
-        showToast('success', 'Profile photo updated successfully');
 
     } catch (error) {
         console.error('Photo upload error:', error);
         showToast('error', error.message || 'Failed to upload photo');
+        if (profilePhoto) {
+            profilePhoto.classList.remove('loading');
+        }
     } finally {
         // Reset file input
         event.target.value = '';
@@ -1861,3 +1902,79 @@ async function handleLogout() {
 
 // Make handleLogout available globally for onclick handlers
 window.handleLogout = handleLogout;
+
+// Add loadUpcomingSessions function
+async function loadUpcomingSessions() {
+    try {
+        const session = checkAuth();
+        if (!session) return;
+
+        const response = await fetch(`${API_BASE_URL}/dashboard/data`, {
+            headers: {
+                'Authorization': `Bearer ${session.token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load upcoming sessions');
+        }
+
+        const data = await response.json();
+        
+        // Get the upcoming sessions container
+        const sessionsContainer = document.getElementById('upcomingSessions');
+        if (!sessionsContainer) {
+            console.log('Upcoming sessions container not found');
+            return;
+        }
+
+        // If no upcoming sessions
+        if (!data.data.upcomingSessions || data.data.upcomingSessions.length === 0) {
+            sessionsContainer.innerHTML = `
+                <div class="text-center text-muted p-4">
+                    <i class="fas fa-calendar fa-2x mb-3"></i>
+                    <p>No upcoming sessions scheduled</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Render upcoming sessions
+        const sessionsHTML = data.data.upcomingSessions.map(session => `
+            <div class="session-item">
+                <div class="session-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <div class="session-content">
+                    <h6 class="session-title">${session.topic || 'Coaching Session'}</h6>
+                    <p class="session-time">
+                        <i class="far fa-clock me-1"></i>
+                        ${new Date(session.startTime).toLocaleString()}
+                    </p>
+                    ${session.coach ? `
+                        <p class="session-coach">
+                            <i class="fas fa-user me-1"></i>
+                            Coach: ${session.coach.name}
+                        </p>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+
+        sessionsContainer.innerHTML = sessionsHTML;
+        
+        return data.data.upcomingSessions;
+    } catch (error) {
+        console.error('Error loading upcoming sessions:', error);
+        const sessionsContainer = document.getElementById('upcomingSessions');
+        if (sessionsContainer) {
+            sessionsContainer.innerHTML = `
+                <div class="text-center text-muted p-4">
+                    <i class="fas fa-exclamation-circle fa-2x mb-3"></i>
+                    <p>Error loading upcoming sessions</p>
+                </div>
+            `;
+        }
+        return [];
+    }
+}

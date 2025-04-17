@@ -11,33 +11,50 @@ const path = require('path');
 const fs = require('fs');
 
 // Create uploads directory if it doesn't exist
-const uploadDir = path.join(__dirname, '..', 'uploads');
+const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
 const profileUploadsDir = path.join(uploadDir, 'profiles');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
-if (!fs.existsSync(profileUploadsDir)) {
-    fs.mkdirSync(profileUploadsDir, { recursive: true });
-}
+
+// Ensure directories exist
+[uploadDir, profileUploadsDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        try {
+            fs.mkdirSync(dir, { recursive: true });
+            console.log(`Created directory: ${dir}`);
+        } catch (err) {
+            console.error(`Error creating directory ${dir}:`, err);
+        }
+    }
+});
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
+        // Log the destination path
+        console.log('Upload destination:', profileUploadsDir);
         cb(null, profileUploadsDir);
     },
     filename: function(req, file, cb) {
         // Create a unique filename with original extension
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
+        const filename = 'profileImage-' + uniqueSuffix + path.extname(file.originalname);
+        console.log('Generated filename:', filename);
+        cb(null, filename);
     }
 });
 
 // File filter function
 const fileFilter = (req, file, cb) => {
+    console.log('Received file:', {
+        originalname: file.originalname,
+        mimetype: file.mimetype
+    });
+    
     // Accept images only
-    if (!file.type.startsWith('image/')) {
-        return cb(new Error('Only image files are allowed!'), false);
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+        console.log('File rejected: not an allowed image type');
+        return cb(new Error('Only image files (jpg, jpeg, png, gif) are allowed!'), false);
     }
+    console.log('File accepted');
     cb(null, true);
 };
 
@@ -81,30 +98,76 @@ const handleUpload = (req, res, next) => {
 // Get user dashboard data
 router.get('/data', auth, async (req, res) => {
     try {
+        // First get the user without population
         const user = await User.findById(req.user.id)
-            .select('-password')
-            .populate('goals')
-            .populate('sessions')
-            .populate('resources');
+            .select('-password');
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
 
+        // Safely populate references
+        if (user.goals && user.goals.length > 0) {
+            try {
+                await user.populate('goals');
+            } catch (error) {
+                console.log('Error populating goals:', error.message);
+                user.goals = [];
+            }
+        }
+
+        if (user.sessions && user.sessions.length > 0) {
+            try {
+                await user.populate('sessions');
+            } catch (error) {
+                console.log('Error populating sessions:', error.message);
+                user.sessions = [];
+            }
+        }
+
+        if (user.resources && user.resources.length > 0) {
+            try {
+                await user.populate('resources');
+            } catch (error) {
+                console.log('Error populating resources:', error.message);
+                user.resources = [];
+            }
+        }
+
+        // Get stats
         const stats = {
-            totalSessions: await Session.countDocuments({ user: req.user.id }),
-            membershipTier: user.membershipTier,
-            resourcesCount: await Resource.countDocuments({ user: req.user.id }),
+            totalSessions: await Session.countDocuments({ user: req.user.id }).catch(() => 0),
+            membershipTier: user.membershipTier || 'basic',
+            resourcesCount: await Resource.countDocuments({ user: req.user.id }).catch(() => 0),
             achievementPoints: user.achievementPoints || 0
         };
 
-        const activities = await Activity.find({ user: req.user.id })
-            .sort('-createdAt')
-            .limit(10);
+        // Get activities with error handling
+        let activities = [];
+        try {
+            activities = await Activity.find({ user: req.user.id })
+                .sort('-createdAt')
+                .limit(10);
+        } catch (error) {
+            console.log('Error fetching activities:', error.message);
+        }
 
-        const upcomingSessions = await Session.find({
-            user: req.user.id,
-            startTime: { $gt: new Date() }
-        })
-        .sort('startTime')
-        .limit(5)
-        .populate('coach', 'name photo');
+        // Get upcoming sessions with error handling
+        let upcomingSessions = [];
+        try {
+            upcomingSessions = await Session.find({
+                user: req.user.id,
+                startTime: { $gt: new Date() }
+            })
+            .sort('startTime')
+            .limit(5)
+            .populate('coach', 'name photo');
+        } catch (error) {
+            console.log('Error fetching upcoming sessions:', error.message);
+        }
 
         res.json({
             success: true,
@@ -153,20 +216,31 @@ router.patch('/profile', auth, async (req, res) => {
 // Upload profile photo with improved error handling
 router.post('/profile/photo', auth, handleUpload, async (req, res) => {
     try {
+        console.log('Profile photo upload request received');
+        
         if (!req.file) {
+            console.log('No file received in request');
             return res.status(400).json({
                 success: false,
                 message: 'Please select an image to upload'
             });
         }
 
+        console.log('File uploaded:', {
+            filename: req.file.filename,
+            path: req.file.path,
+            destination: req.file.destination
+        });
+
         const user = await User.findById(req.user.id);
         if (!user) {
+            console.log('User not found:', req.user.id);
             // Delete uploaded file if user not found
             if (req.file) {
                 const filePath = path.join(profileUploadsDir, req.file.filename);
                 if (fs.existsSync(filePath)) {
                     fs.unlinkSync(filePath);
+                    console.log('Deleted uploaded file due to user not found');
                 }
             }
             return res.status(404).json({
@@ -178,15 +252,22 @@ router.post('/profile/photo', auth, handleUpload, async (req, res) => {
         // Delete old photo if it exists
         if (user.photo && user.photo !== 'default.jpg') {
             const oldPhotoPath = path.join(profileUploadsDir, path.basename(user.photo));
+            console.log('Attempting to delete old photo:', oldPhotoPath);
             if (fs.existsSync(oldPhotoPath)) {
                 fs.unlinkSync(oldPhotoPath);
+                console.log('Old photo deleted successfully');
             }
         }
 
-        // Update user's photo path
-        const photoUrl = `/uploads/profiles/${req.file.filename}`;
-        user.photo = photoUrl;
+        // Store only the relative path
+        const photoPath = `/uploads/profiles/${req.file.filename}`;
+        console.log('New photo path:', photoPath);
+        user.photo = photoPath;
         await user.save();
+
+        // Return the full URL in the response
+        const photoUrl = `http://localhost:5000${photoPath}`;
+        console.log('Full photo URL for client:', photoUrl);
 
         res.json({
             success: true,
@@ -202,35 +283,118 @@ router.post('/profile/photo', auth, handleUpload, async (req, res) => {
             const filePath = path.join(profileUploadsDir, req.file.filename);
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
+                console.log('Deleted uploaded file due to error');
             }
         }
         res.status(500).json({
             success: false,
-            message: 'Error updating profile photo'
+            message: 'Error uploading profile photo'
         });
     }
 });
 
-// Upload cover photo
-router.post('/profile/cover', auth, upload.single('cover'), async (req, res) => {
+// Configure multer for cover uploads
+const coverStorage = multer.diskStorage({
+    destination: function(req, file, cb) {
+        const coverUploadsDir = path.join(uploadDir, 'covers');
+        if (!fs.existsSync(coverUploadsDir)) {
+            fs.mkdirSync(coverUploadsDir, { recursive: true });
+        }
+        cb(null, coverUploadsDir);
+    },
+    filename: function(req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'cover-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const coverUpload = multer({
+    storage: coverStorage,
+    limits: {
+        fileSize: 5 * 1024 * 1024, // 5MB limit
+        files: 1
+    },
+    fileFilter: fileFilter
+}).single('cover');
+
+// Wrapper for handling cover upload
+const handleCoverUpload = (req, res, next) => {
+    coverUpload(req, res, function(err) {
+        if (err instanceof multer.MulterError) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'File is too large. Maximum size is 5MB'
+                });
+            }
+            return res.status(400).json({
+                success: false,
+                message: err.message
+            });
+        } else if (err) {
+            return res.status(400).json({
+                success: false,
+                message: err.message || 'Error uploading cover'
+            });
+        }
+        next();
+    });
+};
+
+// Upload cover image
+router.post('/profile/cover', auth, handleCoverUpload, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({
                 success: false,
-                message: 'No file uploaded'
+                message: 'Please select an image to upload'
             });
         }
 
         const user = await User.findById(req.user.id);
-        user.coverPhoto = `/uploads/${req.file.filename}`;
+        if (!user) {
+            // Delete uploaded file if user not found
+            if (req.file) {
+                const filePath = path.join(uploadDir, 'covers', req.file.filename);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            }
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Delete old cover if it exists
+        if (user.coverPhoto) {
+            const oldCoverPath = path.join(uploadDir, 'covers', path.basename(user.coverPhoto));
+            if (fs.existsSync(oldCoverPath)) {
+                fs.unlinkSync(oldCoverPath);
+            }
+        }
+
+        // Update user's cover photo path
+        const coverUrl = `/uploads/covers/${req.file.filename}`;
+        user.coverPhoto = coverUrl;
         await user.save();
 
         res.json({
             success: true,
-            data: { coverUrl: user.coverPhoto }
+            data: {
+                coverUrl: coverUrl,
+                message: 'Cover photo updated successfully'
+            }
         });
     } catch (error) {
         console.error('Cover upload error:', error);
+        // If an error occurs, try to delete the uploaded file
+        if (req.file) {
+            const filePath = path.join(uploadDir, 'covers', req.file.filename);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
         res.status(500).json({
             success: false,
             message: 'Error uploading cover photo'

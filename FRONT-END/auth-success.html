@@ -3,24 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Authentication Success</title>
-    <script>
-        window.onload = function() {
-            // Get token from URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-            
-            if (token) {
-                // Store token
-                window.opener.postMessage({ type: 'AUTH_SUCCESS', token }, '*');
-                window.close();
-            } else {
-                document.body.innerHTML = '<h3>Authentication failed. Please try again.</h3>';
+    <title>Authentication Successful</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+        }
+
+        .success-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 2.5rem 3rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+            text-align: center;
+            max-width: 90%;
+            width: 500px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: #4CAF50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            animation: scaleIn 0.5s ease-out 0.2s both;
+        }
+
+        .success-icon svg {
+            width: 40px;
+            height: 40px;
+            fill: white;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #ffffff;
+        }
+
+        p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .close-button {
+            background: #ffffff;
+            color: #764ba2;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .close-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
             }
-        };
-    </script>
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                transform: scale(0);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .redirect-text {
+            font-size: 0.9rem;
+            margin-top: 1.5rem;
+            opacity: 0.8;
+        }
+
+        #countdown {
+            font-weight: 600;
+            color: #4CAF50;
+        }
+    </style>
 </head>
 <body>
-    <h3>Authentication successful! You can close this window.</h3>
+    <div class="success-container">
+        <div class="success-icon">
+            <svg viewBox="0 0 24 24">
+                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+            </svg>
+        </div>
+        <h1>Authentication Successful!</h1>
+        <p>You have been successfully authenticated. You will be redirected to your dashboard shortly.</p>
+        <button class="close-button" onclick="closeWindow()">Continue to Dashboard</button>
+        <p class="redirect-text">Auto-redirecting in <span id="countdown">5</span> seconds...</p>
+    </div>
+
+    <script>
+        // Get the token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        // Store token in localStorage
+        if (token) {
+            localStorage.setItem('authToken', token);
+        }
+
+        // Countdown and redirect
+        let timeLeft = 5;
+        const countdownElement = document.getElementById('countdown');
+        
+        const countdown = setInterval(() => {
+            timeLeft--;
+            countdownElement.textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                clearInterval(countdown);
+                redirectToDashboard();
+            }
+        }, 1000);
+
+        function closeWindow() {
+            redirectToDashboard();
+        }
+
+        function redirectToDashboard() {
+            window.location.href = '/dashboard.html';
+        }
+    </script>
 </body>
 </html> 

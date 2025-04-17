@@ -13,6 +13,37 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
 const passport = require('passport');
+const multer = require('multer');
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadPath = path.join(__dirname, 'public', 'uploads');
+        // Create directory if it doesn't exist
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        cb(null, uploadPath);
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 5 * 1024 * 1024 // 5MB limit
+    },
+    fileFilter: function (req, file, cb) {
+        // Accept images only
+        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+            return cb(new Error('Only image files are allowed!'), false);
+        }
+        cb(null, true);
+    }
+});
 
 // Initialize express app
 const app = express();
@@ -38,14 +69,14 @@ uploadDirs.forEach(dir => {
     }
 });
 
-// Security Middleware
+// Security Middleware with updated CSP for image serving
 app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'", "http://localhost:*", "http://127.0.0.1:*"],
-            imgSrc: ["'self'", "data:", "blob:", "http://localhost:*", "http://127.0.0.1:*"],
+            imgSrc: ["'self'", "data:", "blob:", "http://localhost:*", "http://127.0.0.1:*", "*"],
             styleSrc: ["'self'", "'unsafe-inline'", "https:"],
             scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https:"],
             connectSrc: ["'self'", "http://localhost:*", "http://127.0.0.1:*"],
@@ -90,34 +121,80 @@ app.use(xss());
 app.use(hpp());
 app.use(compression());
 
-// Add debugging for static file serving
-// Ensure static files are properly served with appropriate headers for uploads
+// Serve static files from public directory with proper headers
 app.use('/uploads', (req, res, next) => {
-    console.log(`Static file request for: ${req.url}`);
-    
-    // Cache busting headers only
-    res.set({
-        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-        'Pragma': 'no-cache',
-        'Expires': '0'
+    // Log the request
+    console.log('Static file request:', {
+        url: req.url,
+        path: path.join(__dirname, 'public', 'uploads', req.url)
     });
     
+    // Set CORS headers
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    
     next();
-}, express.static(path.join(__dirname, 'public', 'uploads')));
-
-// Make sure to serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public'), { 
+}, express.static(path.join(__dirname, 'public', 'uploads'), {
     setHeaders: (res, path) => {
         if (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.png') || path.endsWith('.gif')) {
-            // Set cache control headers for images
             res.set({
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Cache-Control': 'no-cache',
                 'Pragma': 'no-cache',
                 'Expires': '0'
             });
         }
     }
 }));
+
+// Serve the public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Special route for profile images
+app.get('/uploads/profiles/:filename', (req, res) => {
+    const filename = req.params.filename;
+    const imagePath = path.join(__dirname, 'public', 'uploads', 'profiles', filename);
+    
+    console.log('Profile image request:', {
+        filename,
+        path: imagePath,
+        exists: fs.existsSync(imagePath)
+    });
+    
+    if (fs.existsSync(imagePath)) {
+        res.sendFile(imagePath);
+    } else {
+        res.status(404).json({
+            error: 'Image not found',
+            path: imagePath
+        });
+    }
+});
+
+// Debug route for checking image paths
+app.get('/debug/image/:filename', (req, res) => {
+    const filename = req.params.filename;
+    const possiblePaths = [
+        path.join(__dirname, 'public', 'uploads', 'profiles', filename),
+        path.join(__dirname, 'public', 'uploads', filename)
+    ];
+    
+    console.log('Debugging image request:', {
+        filename,
+        paths: possiblePaths,
+        exists: possiblePaths.map(p => fs.existsSync(p))
+    });
+    
+    const existingPath = possiblePaths.find(p => fs.existsSync(p));
+    if (existingPath) {
+        res.sendFile(existingPath);
+    } else {
+        res.status(404).json({
+            error: 'Image not found',
+            checkedPaths: possiblePaths
+        });
+    }
+});
 
 // Special route for accessing profile images directly
 app.get('/profileImage/:filename', (req, res) => {
