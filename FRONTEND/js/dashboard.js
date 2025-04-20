@@ -113,4 +113,59 @@ function shareOnFacebook() {
         console.error('Error sharing to Facebook:', error);
         showToast('error', 'Failed to share to Facebook');
     }
-} 
+}
+
+// Function to handle logout
+async function handleLogout() {
+    try {
+        // Show loading state on logout button
+        const logoutBtns = document.querySelectorAll('.top-logout-btn');
+        logoutBtns.forEach(btn => {
+            btn.disabled = true;
+            const icon = btn.querySelector('i');
+            if (icon) icon.className = 'fas fa-spinner fa-spin';
+        });
+
+        // Clear all auth-related data from localStorage
+        localStorage.removeItem('session');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('serverPort');
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
+        
+        try {
+            // Call logout endpoint
+            const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                }
+            });
+
+            if (!response.ok) {
+                console.error('Logout failed:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Logout request failed:', error);
+            // Continue with client-side logout even if server request fails
+        }
+
+        // Get the current path and navigate to login page
+        const currentPath = window.location.pathname;
+        const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+        window.location.href = `${basePath}/login.html`;
+    } catch (error) {
+        console.error('Logout error:', error);
+        // Ensure redirect happens even if there's an error
+        const currentPath = window.location.pathname;
+        const basePath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+        window.location.href = `${basePath}/login.html`;
+    }
+}
+
+// Make handleLogout available globally for onclick handlers
+window.handleLogout = handleLogout; 

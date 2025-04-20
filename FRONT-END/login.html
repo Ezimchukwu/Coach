@@ -12,6 +12,46 @@
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .google-btn {
+            background-color: #fff;
+            color: #757575;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+        }
+        .google-btn:hover {
+            background-color: #f1f1f1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .google-btn img {
+            width: 18px;
+            height: 18px;
+        }
+        .divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #ddd;
+        }
+        .divider span {
+            padding: 0 10px;
+            color: #757575;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
 <body class="bg-light">
     <div class="container">
@@ -70,24 +110,30 @@
                             </div>
 
                             <!-- Submit Button -->
-                            <button type="submit" class="btn btn-primary w-100" id="loginButton">
+                            <button type="submit" class="btn btn-primary w-100 mb-3" id="loginButton">
                                 <span class="button-text">Sign In</span>
                                 <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                             </button>
-
-                            <!-- Logout Button (Hidden by default) -->
-                            <button type="button" class="btn btn-outline-primary w-100 d-none" id="logoutButton">
-                                <i class="fas fa-sign-out-alt me-2"></i>Logout
-                            </button>
-
-                            <!-- Register Link -->
-                            <div class="text-center mt-4">
-                                <span class="text-muted">Don't have an account?</span>
-                                <a href="register.html" class="text-primary text-decoration-none ms-1">
-                                    Sign up
-                                </a>
-                            </div>
                         </form>
+
+                        <!-- Divider -->
+                        <div class="divider">
+                            <span>OR</span>
+                        </div>
+
+                        <!-- Google Sign In Button -->
+                        <button type="button" class="btn btn-outline-danger w-100 mb-3 social-btn" id="googleSignInBtn" data-provider="google">
+                            <i class="fab fa-google me-2"></i>
+                            Sign in with Google
+                        </button>
+
+                        <!-- Register Link -->
+                        <div class="text-center mt-4">
+                            <span class="text-muted">Don't have an account?</span>
+                            <a href="register.html" class="text-primary text-decoration-none ms-1">
+                                Sign up
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -98,6 +144,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- AOS JS -->
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <!-- Google OAuth -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Custom JS -->
     <script src="js/login.js"></script>
 </body>

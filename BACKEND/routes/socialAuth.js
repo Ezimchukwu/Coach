@@ -140,11 +140,11 @@ router.get('/google/callback',
         try {
             const token = generateToken(req.user);
             
-            // Redirect to frontend with token
+            // Redirect to auth-success.html with the correct path
             res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5500'}/auth-success.html?token=${token}`);
         } catch (error) {
             console.error('Google auth callback error:', error);
-            res.redirect('/auth-error.html');
+            res.redirect('/login.html?error=Authentication failed');
         }
     }
 );

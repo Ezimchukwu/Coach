@@ -163,53 +163,15 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPhotoUpload();
 });
 
-// Load user data
-async function loadUserData() {
-    try {
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (!session || !session.token) {
-            throw new Error('No valid session found');
-        }
-
-        // Get the current API URL
-        const currentApiUrl = (() => {
-            const serverPort = localStorage.getItem('serverPort') || '5000';
-            return `http://localhost:${serverPort}/api`;
-        })();
-
-        const response = await fetch(`${currentApiUrl}/dashboard/data`, {
-                headers: {
-                    'Authorization': `Bearer ${session.token}`
-                }
-            });
-
-        if (!response.ok) {
-            throw new Error('Failed to load user data');
-        }
-
-        const data = await response.json();
-        if (!data.success || !data.data || !data.data.user) {
-            throw new Error('Invalid response format');
-        }
-
-        return data.data.user;
-    } catch (error) {
-        console.error('Error loading user data:', error);
-        // Use session data as fallback
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (session?.user) {
-            return session.user;
-        }
-        throw error;
-    }
-}
-
-// Initialize dashboard with better error handling
+// Initialize dashboard with improved error handling
 async function initializeDashboard() {
     try {
+        console.log('Starting dashboard initialization...'); // Debug log
+
         // First check authentication
         const session = checkAuth();
         if (!session) {
+            console.log('No valid session found, redirecting to login');
             window.location.href = 'login.html';
             return;
         }
@@ -218,48 +180,146 @@ async function initializeDashboard() {
         showLoadingIndicator(true);
         
         // Initialize UI elements first
+        console.log('Initializing UI elements...');
         initializeUIElements();
         
         // Then initialize event listeners
+        console.log('Initializing event listeners...');
         initializeEventListeners();
-        
-        console.log("Dashboard initialization started...");
-        
-        // Load user data first and wait for it
-        const userData = await loadUserData();
-        
-        // After user data is loaded, update the interface
-        if (userData) {
-            updateUserInterface(userData);
+
+        // Load user data from session first for immediate display
+        console.log('Loading initial user data from session...');
+        if (session.user) {
+            updateUserInterface(session.user);
         }
         
-        // Load other data in parallel
+        // Then try to get fresh data from the server
+        console.log('Fetching fresh user data from server...');
+        try {
+            const userData = await loadUserData();
+            if (userData) {
+                console.log('Fresh user data received:', userData);
+                updateUserInterface(userData);
+                
+                // Update session with fresh data
+                session.user = { ...session.user, ...userData };
+                localStorage.setItem('session', JSON.stringify(session));
+            }
+        } catch (error) {
+            console.warn('Could not fetch fresh user data:', error);
+            // Don't throw here - we already displayed session data
+        }
+
+        // Hide loading indicator
+        showLoadingIndicator(false);
+        
+        // Load other data in background
+        console.log('Loading additional data in background...');
         Promise.allSettled([
-            loadActivityTimeline().catch(err => {
-                console.error('Failed to load timeline:', err);
-                return null;
-            }),
-            loadUpcomingSessions().catch(err => {
-                console.error('Failed to load sessions:', err);
-                return null;
-            })
-        ]).finally(() => {
-            // Hide loading indicator regardless of result
-            showLoadingIndicator(false);
+            loadActivityTimeline(),
+            loadUpcomingSessions()
+        ]).then(results => {
+            results.forEach((result, index) => {
+                if (result.status === 'rejected') {
+                    console.warn(`Background task ${index} failed:`, result.reason);
+                }
+            });
         });
+
+        console.log('Dashboard initialization completed successfully');
         
     } catch (error) {
-        console.error('Error initializing dashboard:', error);
-        showToast('error', 'Dashboard initialization failed. Please refresh the page.');
+        console.error('Error in dashboard initialization:', error);
+        showToast('error', 'Failed to load dashboard data. Please try again.');
         showLoadingIndicator(false);
+    }
+}
+
+// Load user data with better error handling
+async function loadUserData() {
+    try {
+        console.log('Starting loadUserData...'); // Debug log
+        
+        const session = JSON.parse(localStorage.getItem('session'));
+        if (!session || !session.token) {
+            throw new Error('No valid session found');
+        }
+
+        console.log('Making API request to fetch user data...'); // Debug log
+
+        // Use the correct API endpoint
+        const response = await fetch('http://localhost:5000/api/dashboard/profile', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${session.token}`,
+                'Accept': 'application/json'
+            }
+        });
+
+        console.log('API response status:', response.status); // Debug log
+
+        if (!response.ok) {
+            throw new Error(`Failed to load user data: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('API response data:', data); // Debug log
+
+        if (!data.success) {
+            throw new Error(data.message || 'Invalid response format');
+        }
+
+        // Handle different response formats
+        const userData = data.data?.user || data.user || data.data;
+        if (!userData) {
+            throw new Error('No user data in response');
+        }
+
+        console.log('Successfully loaded user data:', userData); // Debug log
+        return userData;
+
+    } catch (error) {
+        console.error('Error in loadUserData:', error);
+        
+        // Try to use session data as fallback
+        try {
+            const session = JSON.parse(localStorage.getItem('session'));
+            if (session?.user) {
+                console.log('Using session data as fallback');
+                return session.user;
+            }
+        } catch (e) {
+            console.error('Failed to get session data:', e);
+        }
+        
+        throw error;
     }
 }
 
 // Shows or hides the loading indicator
 function showLoadingIndicator(show) {
-    const loadingOverlay = document.querySelector('.loading-overlay');
-    if (loadingOverlay) {
+    try {
+        let loadingOverlay = document.querySelector('.loading-overlay');
+        
+        // Create loading overlay if it doesn't exist
+        if (!loadingOverlay) {
+            loadingOverlay = document.createElement('div');
+            loadingOverlay.className = 'loading-overlay';
+            loadingOverlay.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div class="loading-message mt-2">Loading...</div>
+                </div>
+            `;
+            document.body.appendChild(loadingOverlay);
+        }
+        
         loadingOverlay.style.display = show ? 'flex' : 'none';
+        console.log(`Loading indicator ${show ? 'shown' : 'hidden'}`);
+    } catch (error) {
+        console.error('Error managing loading indicator:', error);
     }
 }
 
@@ -324,6 +384,15 @@ function initializeEventListeners() {
             }
         });
 
+        // Initialize edit profile button
+        const editProfileBtn = document.querySelector('[data-action="edit-profile"]');
+        if (editProfileBtn) {
+            editProfileBtn.addEventListener('click', handleEditProfile);
+            console.log('Edit profile button listener initialized');
+        } else {
+            console.warn('Edit profile button not found');
+        }
+
         // Initialize logout button
         const logoutBtn = document.querySelector('.top-logout-btn');
         if (logoutBtn) {
@@ -371,10 +440,14 @@ function initializeProfileUpload() {
                 cameraButton.innerHTML = '<i class="fas fa-camera"></i>';
                 profilePhoto.parentElement.style.position = 'relative';
                 profilePhoto.parentElement.appendChild(cameraButton);
-                
-                // Add click handler to camera button
-                cameraButton.onclick = () => photoInput.click();
             }
+
+            // Add click event listener to camera button
+            cameraButton.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                photoInput.click();
+            });
         }
 
         // Add change handler to file input
@@ -419,7 +492,7 @@ async function handleProfilePhotoUpload(event) {
 
         // Create FormData
         const formData = new FormData();
-        formData.append('photo', file);
+        formData.append('photo', file); // Using 'photo' as the field name to match server expectation
 
         // Get auth token from session
         const session = JSON.parse(localStorage.getItem('session'));
@@ -431,6 +504,8 @@ async function handleProfilePhotoUpload(event) {
             return;
         }
 
+        console.log('Uploading photo...'); // Debug log
+
         // Make API request
         const response = await fetch('http://localhost:5000/api/dashboard/profile/photo', {
             method: 'POST',
@@ -440,26 +515,34 @@ async function handleProfilePhotoUpload(event) {
             body: formData
         });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || 'Failed to upload photo');
-        }
+        console.log('Upload response status:', response.status); // Debug log
 
         const data = await response.json();
-        console.log('Photo upload response:', data);
-        
-        if (!data.success || !data.data || !data.data.photoUrl) {
-            throw new Error('Invalid response from server');
+        console.log('Upload response data:', data); // Debug log
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to upload photo');
         }
 
+        if (!data.success) {
+            throw new Error(data.message || 'Invalid response from server');
+        }
+
+        // Get the photo URL from the response - handle different response formats
+        const photoUrl = data.photoUrl || data.data?.photoUrl || data.data?.photo || data.photo;
+        if (!photoUrl) {
+            throw new Error('No photo URL received from server');
+        }
+
+        console.log('Received photo URL:', photoUrl); // Debug log
+
         // Update session storage with the new photo URL
-        session.user.photo = data.data.photoUrl;
+        if (session.user) {
+            session.user.photo = photoUrl;
         localStorage.setItem('session', JSON.stringify(session));
+        }
         
-        // Get the direct URL for the uploaded photo
-        const photoUrl = `http://localhost:5000${data.data.photoUrl}`;
-        
-        // Update all photo elements
+        // Update all photo elements with the new URL
         photoElements.forEach(element => {
             if (!element) return;
             
@@ -676,405 +759,201 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Edit Profile and Share button handlers
-function editProfile() {
+// Handle edit profile button click
+async function handleEditProfile() {
     try {
-        // Get current user data from session
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (!session || !session.user) {
-            showToast('error', 'Please log in to edit your profile');
-            return;
+        console.log('Edit profile button clicked'); // Debug log
+
+        // Get session data
+        const sessionData = localStorage.getItem('session');
+        if (!sessionData) {
+            throw new Error('No session found');
         }
 
-        // Get modal or create it if it doesn't exist
-        let editModal = document.getElementById('editProfileModal');
-        if (!editModal) {
-            console.error('Edit profile modal not found in the DOM');
-            return;
+        let session;
+        try {
+            session = JSON.parse(sessionData);
+        } catch (e) {
+            console.error('Error parsing session data:', e);
+            throw new Error('Invalid session data');
         }
 
-        // Populate form with user data
-        const user = session.user;
-        
-        // Split name into first and last name if needed
-        let firstName = user.firstName || '';
-        let lastName = user.lastName || '';
-        
-        if (!firstName && !lastName && user.name) {
-            const nameParts = user.name.split(' ');
-            firstName = nameParts[0] || '';
-            lastName = nameParts.slice(1).join(' ') || '';
+        if (!session || !session.token) {
+            throw new Error('No valid session found');
         }
-        
-        document.getElementById('editFirstName').value = firstName;
-        document.getElementById('editLastName').value = lastName;
-        document.getElementById('editBio').value = user.bio || '';
-        document.getElementById('editPhone').value = user.phoneNumber || '';
-        document.getElementById('editLocation').value = user.location || '';
 
-        // Show the modal
-        const modal = new bootstrap.Modal(editModal);
-        modal.show();
+        // Show loading state
+        showLoadingState(true, 'Loading profile data...');
+
+        // Get user data from session as fallback
+        const userData = session.user || {};
+        console.log('User data:', userData); // Debug log
+
+        // Get modal and form
+        const modal = document.getElementById('editProfileModal');
+        if (!modal) {
+            throw new Error('Edit profile modal not found');
+        }
+
+        const form = modal.querySelector('#editProfileForm');
+        if (!form) {
+            throw new Error('Edit profile form not found');
+        }
+
+        // Populate form fields
+        const fields = {
+            'editFirstName': userData.firstName || '',
+            'editLastName': userData.lastName || '',
+            'editEmail': userData.email || '',
+            'editPhone': userData.phoneNumber || '',
+            'editLocation': userData.location || '',
+            'editBio': userData.bio || ''
+        };
+
+        // Update each field and log the value being set
+        Object.entries(fields).forEach(([id, value]) => {
+            const element = form.querySelector(`#${id}`);
+            if (element) {
+                element.value = value;
+                console.log(`Setting ${id} to:`, value);
+            } else {
+                console.warn(`Field ${id} not found in form`);
+            }
+        });
+
+        // Initialize Bootstrap modal
+        const modalInstance = new bootstrap.Modal(modal);
+        console.log('Showing modal'); // Debug log
+        modalInstance.show();
+
+        // Setup save button handler
+        const saveButton = modal.querySelector('#saveProfileBtn');
+        if (saveButton) {
+            // Remove existing listeners
+            const newSaveButton = saveButton.cloneNode(true);
+            saveButton.parentNode.replaceChild(newSaveButton, saveButton);
+            
+            // Add new listener
+            newSaveButton.addEventListener('click', () => handleSaveProfile(modalInstance));
+            console.log('Save button handler attached'); // Debug log
+        }
+
     } catch (error) {
-        console.error('Error opening edit profile modal:', error);
-        showToast('error', 'Failed to open edit profile form');
+        console.error('Error opening edit profile:', error);
+        showToast('error', error.message || 'Error opening edit profile form');
+    } finally {
+        showLoadingState(false);
     }
 }
 
-async function saveProfile() {
+// Handle save profile
+async function handleSaveProfile(modalInstance) {
+    const modal = document.getElementById('editProfileModal');
+    const form = modal.querySelector('#editProfileForm');
+    const saveButton = modal.querySelector('#saveProfileBtn');
+
     try {
-        // Show loading indicator
-        showLoadingIndicator(true);
+        // Show loading state
+        saveButton.disabled = true;
+        saveButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
 
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (!session || !session.token) {
-            showToast('error', 'Please log in to save profile changes');
-            return;
-        }
-
-        // Get form values
-        const firstName = document.getElementById('editFirstName').value.trim();
-        const lastName = document.getElementById('editLastName').value.trim();
-        const bio = document.getElementById('editBio').value.trim();
-        const phoneNumber = document.getElementById('editPhone').value.trim();
-        const location = document.getElementById('editLocation').value.trim();
-        
-        const updatedProfile = {
-            firstName,
-            lastName,
-            bio,
-            phoneNumber,
-            location
+        // Get form data
+        const formData = {
+            firstName: form.querySelector('#editFirstName').value.trim(),
+            lastName: form.querySelector('#editLastName').value.trim(),
+            email: form.querySelector('#editEmail').value.trim(),
+            phoneNumber: form.querySelector('#editPhone').value.trim(),
+            location: form.querySelector('#editLocation').value.trim(),
+            bio: form.querySelector('#editBio').value.trim()
         };
 
+        console.log('Form data to save:', formData); // Debug log
+
         // Validate required fields
-        if (!firstName || !lastName) {
-            showToast('error', 'First name and last name are required');
-            showLoadingIndicator(false);
-            return;
+        if (!formData.firstName || !formData.lastName || !formData.email) {
+            throw new Error('Please fill in all required fields');
         }
 
-        // Log request details for debugging
-        console.log('Sending profile update request to:', `${API_BASE_URL}/dashboard/profile`);
-        console.log('With data:', updatedProfile);
-
-        // Make API request
-        const response = await fetch(`${API_BASE_URL}/dashboard/profile`, {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.token}`
-            },
-            body: JSON.stringify(updatedProfile)
-        });
-
-        // Log response status for debugging
-        console.log('Profile update response status:', response.status);
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Profile update error response:', errorData);
-            throw new Error(errorData.message || 'Failed to update profile');
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.email)) {
+            throw new Error('Please enter a valid email address');
         }
 
-        // Parse response data
-        const data = await response.json();
-        console.log('Profile update success response:', data);
-
-        // Update session storage with updated user data
-        if (data && data.success && data.data) {
-            // Update session with returned user data
-            session.user = { 
-                ...session.user, 
-                ...data.data.user || data.data,
-                firstName,
-                lastName,
-                bio,
-                phoneNumber,
-                location
-            };
-            
-            localStorage.setItem('session', JSON.stringify(session));
-            console.log('Updated session with new user data:', session.user);
-        } else {
-            // If response doesn't contain user data, update with form values
-            session.user = { 
-                ...session.user, 
-                firstName,
-                lastName,
-                bio,
-                phoneNumber,
-                location
-            };
-            localStorage.setItem('session', JSON.stringify(session));
-            console.log('Updated session with form data:', session.user);
+        // Get session data
+        const session = JSON.parse(localStorage.getItem('session'));
+        if (!session || !session.token) {
+            throw new Error('No valid session found');
         }
 
-        // Update UI with the updated user data
-        updateUserInterface(session.user);
+        // Update session data first (optimistic update)
+        session.user = { ...session.user, ...formData };
+        localStorage.setItem('session', JSON.stringify(session));
+
+        // Update UI immediately
+        updateProfileDisplay(session.user);
 
         // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('editProfileModal'));
-        if (modal) {
-            modal.hide();
-        }
+        modalInstance.hide();
 
+        // Show success message
         showToast('success', 'Profile updated successfully');
-        
-        // Update profile in page without refresh
-        updateProfileDetails(session.user);
         
     } catch (error) {
         console.error('Error saving profile:', error);
-        showToast('error', error.message || 'Failed to save profile changes');
+        showToast('error', error.message || 'Error updating profile');
     } finally {
-        showLoadingIndicator(false);
+        // Reset button state
+        saveButton.disabled = false;
+        saveButton.innerHTML = 'Save Changes';
     }
 }
 
-// Direct function to update profile details elements in the UI
-function updateProfileDetails(user) {
-    // Update profile details in all places
-    if (user) {
-        // Update name fields
-        const fullName = user.firstName && user.lastName 
-            ? `${user.firstName} ${user.lastName}` 
-            : user.name || 'User';
-            
-        // Update all name elements
-        const nameElements = document.querySelectorAll('.user-name, #userName, #profileName, #profileHeaderName');
-        nameElements.forEach(el => {
-            if (el) el.textContent = fullName;
-        });
-        
-        // Update welcome message
-        const welcomeElements = document.querySelectorAll('#welcomeUserName');
-        welcomeElements.forEach(el => {
-            if (el) el.textContent = `Welcome back, ${user.firstName || 'User'}!`;
-        });
-        
-        // Update bio elements
-        const bioElements = document.querySelectorAll('#profileBio, .user-bio');
-        bioElements.forEach(el => {
-            if (el) el.textContent = user.bio || 'No bio available';
-        });
-        
-        // Update email elements
-        const emailElements = document.querySelectorAll('#userEmail, #profileEmail, #profileHeaderEmail');
-        emailElements.forEach(el => {
-            if (el) el.textContent = user.email || 'Email not available';
-        });
-        
-        // Update phone elements
-        const phoneElements = document.querySelectorAll('#profilePhone, .user-phone');
-        phoneElements.forEach(el => {
-            if (el) el.textContent = user.phoneNumber || 'Phone not provided';
-        });
-        
-        // Update location elements
-        const locationElements = document.querySelectorAll('#profileLocation, .user-location');
-        locationElements.forEach(el => {
-            if (el) el.textContent = user.location || 'Location not provided';
-        });
-        
-        console.log('Profile details updated in UI');
-    }
-}
-
-function shareProfile() {
-    try {
-        // Get current user data
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (!session || !session.user) {
-            showToast('error', 'Please log in to share your profile');
-            return;
-        }
-
-        // Get user ID
-        const userId = session.user.id || session.user._id;
-        if (!userId) {
-            console.error('Cannot find user ID in session:', session.user);
-            showToast('error', 'Could not determine user ID');
-            return;
-        }
-
-        // Generate profile link
-        const serverBaseUrl = getServerUrl();
-        const profileLink = `${serverBaseUrl}/profile/${userId}`;
-
-        // Create share modal if it doesn't exist
-        let shareModal = document.getElementById('shareProfileModal');
-        if (!shareModal) {
-            const modalHTML = `
-                <div class="modal fade" id="shareProfileModal" tabindex="-1" aria-labelledby="shareProfileModalLabel" aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title" id="shareProfileModalLabel">Share Profile</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                            </div>
-                            <div class="modal-body">
-                                <p>Share your profile with others using this link:</p>
-                                <div class="input-group mb-3">
-                                    <input type="text" class="form-control" id="profileLinkInput" value="${profileLink}" readonly>
-                                    <button class="btn btn-outline-primary" type="button" onclick="copyProfileLink()">
-                                        <i class="fas fa-copy me-2"></i>Copy
-                                    </button>
-                                </div>
-                                <div class="share-options mt-4">
-                                    <p class="mb-2">Or share directly:</p>
-                                    <div class="social-share-buttons d-flex justify-content-center">
-                                        <button class="btn btn-outline-primary me-2" onclick="shareOnLinkedIn()">
-                                            <i class="fab fa-linkedin me-1"></i> LinkedIn
-                                        </button>
-                                        <button class="btn btn-outline-primary me-2" onclick="shareOnTwitter()">
-                                            <i class="fab fa-twitter me-1"></i> Twitter
-                                        </button>
-                                        <button class="btn btn-outline-primary" onclick="shareOnFacebook()">
-                                            <i class="fab fa-facebook me-1"></i> Facebook
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            </div>
-                        </div>
-                    </div>
-        </div>
-    `;
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-            shareModal = document.getElementById('shareProfileModal');
-        } else {
-            // Update the link in case the user ID has changed
-            const linkInput = shareModal.querySelector('#profileLinkInput');
-            if (linkInput) {
-                linkInput.value = profileLink;
+// Show/hide loading state
+function showLoadingState(show, message = 'Loading...') {
+    const loadingOverlay = document.querySelector('.loading-overlay');
+    if (loadingOverlay) {
+        if (show) {
+            const loadingMessage = loadingOverlay.querySelector('.loading-message');
+            if (loadingMessage) {
+                loadingMessage.textContent = message;
             }
+            loadingOverlay.style.display = 'flex';
+        } else {
+            loadingOverlay.style.display = 'none';
         }
-
-        // Show the modal
-        const modal = new bootstrap.Modal(shareModal);
-        modal.show();
-    } catch (error) {
-        console.error('Error opening share modal:', error);
-        showToast('error', 'Failed to open share options');
     }
 }
 
-function copyProfileLink() {
-    try {
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (!session || !session.user) {
-            showToast('error', 'Please log in to share your profile');
-            return;
+// Update profile display in UI
+function updateProfileDisplay(userData) {
+    console.log('Updating profile display with:', userData); // Debug log
+
+    const elements = {
+        '#profileHeaderName': `${userData.firstName} ${userData.lastName}`,
+        '#profileHeaderEmail': userData.email || 'Email not set',
+        '#profileName': `${userData.firstName} ${userData.lastName}`,
+        '#profileEmail': userData.email || 'Email not set',
+        '#profilePhone': userData.phoneNumber || 'Phone not set',
+        '#profileLocation': userData.location || 'Location not set',
+        '#profileBio': userData.bio || 'No bio added yet',
+        '#userName': `${userData.firstName} ${userData.lastName}`,
+        '#welcomeUserName': `Welcome back, ${userData.firstName}!`,
+        '#userEmail': userData.email || 'Email not set'
+    };
+
+    for (const [selector, value] of Object.entries(elements)) {
+        const element = document.querySelector(selector);
+        if (element) {
+            element.textContent = value;
+            console.log(`Updated ${selector} with:`, value); // Debug log
+        } else {
+            console.warn(`Element not found: ${selector}`);
         }
-
-        // Get user ID - might be stored in different properties depending on API response
-        const userId = session.user.id || session.user._id;
-        
-        if (!userId) {
-            console.error('Cannot find user ID in session:', session.user);
-            showToast('error', 'Could not determine user ID');
-            return;
-        }
-
-        // Generate profile link with correct path
-        const serverBaseUrl = getServerUrl();
-        const profileLink = `${serverBaseUrl}/profile/${userId}`;
-        
-        console.log('Generated profile link:', profileLink);
-
-        // Copy to clipboard
-        navigator.clipboard.writeText(profileLink)
-            .then(() => {
-                showToast('success', 'Profile link copied to clipboard');
-            })
-            .catch(err => {
-                console.error('Clipboard write failed:', err);
-                // Fallback method for copying
-                const tempInput = document.createElement('input');
-                tempInput.value = profileLink;
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempInput);
-                showToast('success', 'Profile link copied to clipboard');
-            });
-    } catch (error) {
-        console.error('Error copying profile link:', error);
-        showToast('error', 'Failed to copy profile link');
     }
 }
 
-function shareOnLinkedIn() {
-    try {
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (!session || !session.user) {
-            showToast('error', 'Please log in to share your profile');
-            return;
-        }
-        
-        // Get user ID and generate profile link
-        const userId = session.user.id || session.user._id;
-        const serverBaseUrl = getServerUrl();
-        const profileLink = `${serverBaseUrl}/profile/${userId}`;
-        
-        // Encode for sharing
-        const url = encodeURIComponent(profileLink);
-        window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${url}`, '_blank');
-    } catch (error) {
-        console.error('Error sharing to LinkedIn:', error);
-        showToast('error', 'Failed to share to LinkedIn');
-    }
-}
-
-function shareOnTwitter() {
-    try {
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (!session || !session.user) {
-            showToast('error', 'Please log in to share your profile');
-            return;
-        }
-        
-        // Get user ID and generate profile link
-        const userId = session.user.id || session.user._id;
-        const serverBaseUrl = getServerUrl();
-        const profileLink = `${serverBaseUrl}/profile/${userId}`;
-        
-        // Encode for sharing
-        const url = encodeURIComponent(profileLink);
-        const text = encodeURIComponent('Check out my coaching profile!');
-        window.open(`https://twitter.com/intent/tweet?url=${url}&text=${text}`, '_blank');
-    } catch (error) {
-        console.error('Error sharing to Twitter:', error);
-        showToast('error', 'Failed to share to Twitter');
-    }
-}
-
-function shareOnFacebook() {
-    const session = JSON.parse(localStorage.getItem('session'));
-    if (!session || !session.user) {
-        showToast('error', 'Please log in to share your profile');
-        return;
-    }
-    
-    // Get user ID and generate profile link
-    const userId = session.user.id || session.user._id;
-    if (!userId) {
-        showToast('error', 'Could not determine user ID');
-        return;
-    }
-    
-    const serverBaseUrl = getServerUrl();
-    const profileLink = `${serverBaseUrl}/profile/${userId}`;
-    
-    // Encode for sharing
-    const url = encodeURIComponent(profileLink);
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
-}
-
-// Show toast messages
+// Show toast message
 function showToast(type, message) {
     const toastContainer = document.querySelector('.toast-container');
     if (!toastContainer) {
@@ -1088,7 +967,7 @@ function showToast(type, message) {
 
     toastContainer.appendChild(toast);
     
-    // Force reflow to ensure transition works
+    // Force reflow
     toast.offsetHeight;
     
     // Show the toast
@@ -1099,7 +978,7 @@ function showToast(type, message) {
         setTimeout(() => {
             toast.classList.remove('show');
             
-            // Remove from DOM after animation completes
+            // Remove from DOM after animation
             setTimeout(() => toast.remove(), 300);
         }, 3000);
     }, 10);
@@ -1442,6 +1321,13 @@ function testProfileLink() {
 // Update user interface with better error handling
 function updateUserInterface(user) {
     try {
+        console.log('Updating user interface with data:', user); // Debug log
+
+        if (!user) {
+            console.error('No user data provided to updateUserInterface');
+            return;
+        }
+
         // Update basic user details first
         updateUserBasicDetails(user);
         
@@ -1452,9 +1338,15 @@ function updateUserInterface(user) {
         if (user.stats) {
             updateUserStats(user.stats);
         }
+
+        console.log('User interface updated successfully');
+
     } catch (error) {
         console.error('Error updating user interface:', error);
-        restoreDefaultUI();
+        // Don't restore default UI if we have partial data
+        if (!user) {
+            restoreDefaultUI();
+        }
     }
 }
 
@@ -1872,6 +1764,11 @@ async function handleLogout() {
         localStorage.removeItem('session');
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('serverPort');
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userEmail');
+        localStorage.removeItem('userName');
         
         try {
             // Call logout endpoint
@@ -1891,12 +1788,18 @@ async function handleLogout() {
             // Continue with client-side logout even if server request fails
         }
 
-        // Redirect to login page
-        window.location.href = '/Coach/FRONT-END/login.html';
+        // Get the current path and navigate up to the correct login page
+        const currentPath = window.location.pathname;
+        const pathToRoot = currentPath.includes('/FRONT-END/') ? '../' : '';
+        
+        // Redirect to login page using the correct relative path
+        window.location.replace(`${pathToRoot}login.html`);
     } catch (error) {
         console.error('Logout error:', error);
-        // Ensure redirect happens even if there's an error
-        window.location.href = '/Coach/FRONT-END/login.html';
+        // Ensure redirect happens even if there's an error, using the same path logic
+        const currentPath = window.location.pathname;
+        const pathToRoot = currentPath.includes('/FRONT-END/') ? '../' : '';
+        window.location.replace(`${pathToRoot}login.html`);
     }
 }
 
@@ -1978,3 +1881,7 @@ async function loadUpcomingSessions() {
         return [];
     }
 }
+
+// Make functions globally available
+window.editProfile = editProfile;
+window.saveProfile = saveProfile;

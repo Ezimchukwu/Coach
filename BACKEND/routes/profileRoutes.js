@@ -72,17 +72,35 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update profile
-router.patch('/', auth, async (req, res) => {
+router.put('/', auth, async (req, res) => {
     try {
-        const allowedUpdates = ['firstName', 'lastName', 'bio', 'location', 'phoneNumber'];
+        const allowedUpdates = ['firstName', 'lastName', 'email', 'bio', 'location', 'phoneNumber'];
         const updates = {};
 
+        // Validate required fields
+        if (!req.body.firstName || !req.body.lastName) {
+            return res.status(400).json({
+                success: false,
+                message: 'First name and last name are required'
+            });
+        }
+
+        // Validate email format if provided
+        if (req.body.email && !req.body.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid email format'
+            });
+        }
+
+        // Build updates object with validated fields
         Object.keys(req.body).forEach(key => {
             if (allowedUpdates.includes(key) && req.body[key] !== undefined) {
-                updates[key] = req.body[key];
+                updates[key] = req.body[key].trim();
             }
         });
 
+        // Find and update user
         const user = await User.findByIdAndUpdate(
             req.user.id,
             { $set: updates },
@@ -96,15 +114,22 @@ router.patch('/', auth, async (req, res) => {
             });
         }
 
+        // Log successful update
+        console.log('Profile updated successfully:', {
+            userId: user._id,
+            updatedFields: Object.keys(updates)
+        });
+
         res.json({
             success: true,
+            message: 'Profile updated successfully',
             data: { user }
         });
     } catch (error) {
         console.error('Profile update error:', error);
         res.status(500).json({
             success: false,
-            message: 'Error updating profile'
+            message: error.message || 'Error updating profile'
         });
     }
 });
